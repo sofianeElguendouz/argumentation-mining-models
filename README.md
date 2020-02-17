@@ -1,2 +1,4 @@
-# ecai2020-transformer_based_am_for_healthcare
+# Transformer-based Argument Mining for Healthcare Applications
 
+Source code of our experiments from our ECAI2020 paper:
+...

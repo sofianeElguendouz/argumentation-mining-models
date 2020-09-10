@@ -14,8 +14,8 @@ class BertForSequenceTagging(BertPreTrainedModel):
 
         self.bert = BertModel(config)
 
-        #self.rnn = nn.GRU(config.hidden_size, config.hidden_size, batch_first=True, bidirectional=True)
-        self.rnn = nn.LSTM(config.hidden_size, config.hidden_size, batch_first=True, bidirectional=True)
+        self.rnn = nn.GRU(config.hidden_size, config.hidden_size, batch_first=True, bidirectional=True)
+        #self.rnn = nn.LSTM(config.hidden_size, config.hidden_size, batch_first=True, bidirectional=True)
 
         self.crf = CRF(config.num_labels, batch_first=True)
         self.classifier = nn.Linear(2 * config.hidden_size, config.num_labels)

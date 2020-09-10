@@ -35,15 +35,18 @@ if _has_sklearn:
     def acc_and_f1(preds, labels):
         #acc = simple_accuracy(preds, labels)
         #f1 = f1_score(y_true=labels, y_pred=preds)
-        f1_micro = f1_score(labels, preds, labels=[2, 4, 5], average='micro')
+        f1_micro = f1_score(labels, preds, labels=[1, 2, 3, 4, 5], average='micro')
         f1_macro = f1_score(labels, preds, average='macro')
-
+        f1_claim = f1_score(labels, preds, labels=[1,2], average='micro')
+        f1_evidence = f1_score(labels, preds, labels=[3,4], average='micro')
 
         return {
             #"acc": acc,
             #"f1": f1,
             'eval_f1_micro': f1_micro,
-            'eval_f1_macro': f1_macro
+            'eval_f1_macro': f1_macro,
+            'f1_claim':f1_claim,
+            'f1_evidence':f1_claim,
             #"acc_and_f1": (acc + f1) / 2,
         }
 

@@ -46,7 +46,7 @@ if _has_sklearn:
             'eval_f1_micro': f1_micro,
             'eval_f1_macro': f1_macro,
             'f1_claim':f1_claim,
-            'f1_evidence':f1_claim,
+            'f1_evidence':f1_evidence,
             #"acc_and_f1": (acc + f1) / 2,
         }
 

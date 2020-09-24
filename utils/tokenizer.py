@@ -49,7 +49,7 @@ class ExtendedBertTokenizer(BertTokenizer):
             sentence = []
             y_pred = []
 
-            for j, token_id in enumerate(input_ids[i].numpy()):  # iterate over tokens of one sequence
+            for j, token_id in enumerate(input_ids[i].cpu().numpy()):  # iterate over tokens of one sequence
 
                 token = self._convert_id_to_token(token_id)
 

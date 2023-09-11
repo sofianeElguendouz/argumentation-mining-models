@@ -31,8 +31,10 @@ export OUTPUTDIR=output/$TASK_NAME+$MAXSEQLENGTH/
 #export MODEL=bert-base-uncased
 #export MODEL=monologg/biobert_v1.1_pubmed
 #export MODEL=monologg/scibert_scivocab_uncased
-export MODEL=allenai/scibert_scivocab_uncased
-#export MODEL=roberta-base
+#export MODEL=allenai/scibert_scivocab_uncased
+#export MODEL=xlm-roberta-base
+export MODEL=mdeberta-v3-base
+
 
 
 #python train_multiplechoice.py \

@@ -161,3 +161,4 @@ cython_debug/
 
 # Project Specifics
 *env/
+.vscode/

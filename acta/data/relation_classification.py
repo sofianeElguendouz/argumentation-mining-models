@@ -1,6 +1,7 @@
 import csv
 
-from typing import Dict, List, Optional, Union
+from transformers.tokenization_utils_base import BatchEncoding
+from typing import Dict, Optional
 
 from .base import BaseDataset
 
@@ -70,7 +71,7 @@ class RelationClassificationDataset(BaseDataset):
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, idx) -> Dict[str, Union[int, List[int]]]:
+    def __getitem__(self, idx) -> BatchEncoding:
         data = self.dataset[idx]
 
         if isinstance(idx, slice):

@@ -1,6 +1,6 @@
 import csv
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Union
 
 from .base import BaseDataset
 
@@ -43,12 +43,9 @@ class RelationClassificationDataset(BaseDataset):
                          delimiter=delimiter, quotechar=quotechar,
                          label_prefix=label_prefix)
 
-        # Once we are sure the labels were loaded, we map the target to its
-        # corresponding labels.
-        self.target = [self.labels[t] for t in self.target]
-
     def _load_dataset(self,
                       path_to_dataset: str,
+                      missing_labels: bool = False,
                       delimiter: str = '\t',
                       quotechar: str = '"',
                       label_prefix: str = '__label__'):
@@ -63,15 +60,17 @@ class RelationClassificationDataset(BaseDataset):
             }
             for d in dataset
         ]
-        self.target = [d[0].lstrip(label_prefix) for d in dataset]
 
-    def _get_labels(self) -> Dict[str, int]:
-        return {lbl: idx for idx, lbl in enumerate(sorted(set(self.target)))}
+        target = [d[0].lstrip(label_prefix) for d in dataset]
+        if missing_labels:
+            self.labels = {lbl: idx for idx, lbl in enumerate(sorted(set(target)))}
 
-    def __len__(self):
+        self.target = [self.labels[tgt] for tgt in target]
+
+    def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Dict[str, Union[int, List[int]]]:
         data = self.dataset[idx]
 
         if isinstance(idx, slice):

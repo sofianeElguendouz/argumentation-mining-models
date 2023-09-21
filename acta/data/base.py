@@ -38,16 +38,15 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_model_or_path)
         self.labels = labels
 
-        self._load_dataset(path_to_dataset, **kwargs)
         if self.labels is None:
             logger.warning(
                 "There labels parameter is missing, it will be calculated from the dataset. "
                 "This might not have all the available labels."
             )
-            self.labels = self._get_labels()
+        self._load_dataset(path_to_dataset, missing_labels=self.labels is None, **kwargs)
 
     @abstractmethod
-    def _load_dataset(self, path_to_dataset: str, **kwargs):
+    def _load_dataset(self, path_to_dataset: str, missing_labels: bool = False, **kwargs):
         """
         Method to load the dataset to `self.dataset` as well as other attributes.
         Must be implemented on each class that inherits from this one.
@@ -56,17 +55,6 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         ----------
         path_to_dataset: str
             Path to the dataset to load (it comes from the class constructor).
-        """
-
-    @abstractmethod
-    def _get_labels(self) -> Dict[str, int]:
-        """
-        Method to load the labels from the dataset (in case they weren't present
-        when calling the constructor). Must be implemented on each class that
-        inherits from this one.
-
-        Returns
-        -------
-        Dict[str, int]
-            A map between labels and indices.
+        missing_labels: bool
+            If True, then collect the labels from the dataset file as well.
         """

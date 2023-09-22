@@ -65,11 +65,18 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
 
         return path, emissions
 
-    def training_step(self, batch, batch_idx):
+    def _loss(self, batch):
         labels = batch.pop('labels')
         path, emissions = self(**batch)
         mask = (labels != self.hparams.masked_label).to(torch.uint8)
 
         return -self.crf(emissions, labels, mask=mask)
 
-    # FIXME: Add validation, test and evaluation steps. Add logging.
+    def training_step(self, batch, batch_idx):
+        return self._loss(batch)
+
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        self.log("val_loss", self._loss(batch))
+
+    def test_step(self, batch, batch_idx):
+        self.log("test_loss", self._loss(batch))

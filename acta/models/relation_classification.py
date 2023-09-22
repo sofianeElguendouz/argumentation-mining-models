@@ -50,4 +50,10 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
         outputs = self(**batch)
         return outputs.loss
 
-    # FIXME: Add validation, test and evaluation steps and logging
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        outputs = self(**batch)
+        self.log("val_loss", outputs.loss)
+
+    def test_step(self, batch, batch_idx):
+        outputs = self(**batch)
+        self.log("test_loss", outputs.loss)

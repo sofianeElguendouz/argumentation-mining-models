@@ -1,3 +1,8 @@
+"""
+SequenceTaggingDataset module. It has the definition of the dataset to read
+CONLL based column format for Sequence Tagging (Token Classification).
+"""
+
 from itertools import chain
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Dict, List, Optional, Union

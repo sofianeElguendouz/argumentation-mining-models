@@ -1,3 +1,8 @@
+"""
+RelationClassificationDataset module. It has the definition of the dataset to read
+column based data (csv, tsv) for Relation classification.
+"""
+
 import csv
 
 from transformers.tokenization_utils_base import BatchEncoding

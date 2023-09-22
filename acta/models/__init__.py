@@ -1,4 +1,4 @@
-from .relation_classificaiton import RelationClassificationTransformerModule
+from .relation_classification import RelationClassificationTransformerModule
 from .sequence_tagging import SequenceTaggingTransformerModule
 
 __all__ = [

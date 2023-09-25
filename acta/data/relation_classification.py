@@ -22,7 +22,7 @@ import csv
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Dict, Optional
 
-from .base import BaseDataset
+from .base import BaseDataset, BaseDataModule
 
 
 class RelationClassificationDataset(BaseDataset):
@@ -107,3 +107,35 @@ class RelationClassificationDataset(BaseDataset):
         tokenized_data['label'] = self.target[idx]
 
         return tokenized_data
+
+class RelationClassificationDataModule(BaseDataModule):
+    """
+    Data module for classification of relationship between a pairs of sentences
+    (e.g. supports, attacks, etc.).
+
+    Parameters
+    ----------
+    model_model_or_path: str
+        Name or path to a Hugging Face Model to load.
+    tokenizer_model_or_path: str
+        Name or path to a Hugging Face Tokenizer to load.
+    path_to_dataset: str
+        Path to a dataset (the format depends on the type of dataset)
+    """
+    def _load_dataset_split(self,
+                            path: str,
+                            **kwargs):
+        """
+        Method to load a dataset split as a part of self.dataset.
+        Must be implemented on each class that inherits from this one.
+
+        Parameters
+        ----------
+        path: str
+            Path to the dataset split to load (it comes from the class 
+            constructor).
+        """
+        dataset = RelationClassificationDataset(tokenizer_model_or_path = self.tokenizer_name_or_path,
+                                                        path_to_dataset = path # Adjust path when we have a final project structure
+                                                )
+        return dataset

@@ -21,7 +21,7 @@ from itertools import chain
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Dict, List, Optional, Union
 
-from .base import BaseDataset
+from .base import BaseDataset, BaseDataModule
 
 
 class SequenceTaggingDataset(BaseDataset):
@@ -243,3 +243,35 @@ class SequenceTaggingDataset(BaseDataset):
             })
         else:
             return self._tokenize_and_align_labels(self.dataset[idx])
+
+class SequenceTaggingDataModule(BaseDataModule):
+    """
+    Data module for sequence tagging (i.e. classify each token in a sequence of
+    tokens).
+
+    Parameters
+    ----------
+    model_model_or_path: str
+        Name or path to a Hugging Face Model to load.
+    tokenizer_model_or_path: str
+        Name or path to a Hugging Face Tokenizer to load.
+    path_to_dataset: str
+        Path to a dataset (the format depends on the type of dataset)
+    """
+    def _load_dataset_split(self,
+                            path: str,
+                            **kwargs):
+        """
+        Method to load a dataset split as a part of self.dataset.
+        Must be implemented on each class that inherits from this one.
+
+        Parameters
+        ----------
+        path: str
+            Path to the dataset split to load (it comes from the class 
+            constructor).
+        """
+        dataset = SequenceTaggingDataset(tokenizer_model_or_path = self.tokenizer_name_or_path,
+                                                path_to_dataset = path # Adjust path when we have a final project structure
+                                        )
+        return dataset

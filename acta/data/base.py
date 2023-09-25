@@ -20,7 +20,8 @@ Module that defines the abstract class `BaseDataset` which is the base class for
 import logging
 
 from abc import ABCMeta, abstractmethod
-from torch.utils.data import Dataset
+from pathlib import PosixPath
+from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 from typing import Dict, Optional
 
@@ -75,3 +76,101 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         path_to_dataset: str
             Path to the dataset to load (it comes from the class constructor).
         """
+
+class BaseDataModule(LightningDataModule):
+    """
+    BaseDataModule abstract class. Contains some common implementations
+    for data module classes.
+
+    Parameters
+    ----------
+    model_model_or_path: str
+        Name or path to a Hugging Face Model to load.
+    tokenizer_model_or_path: str
+        Name or path to a Hugging Face Tokenizer to load.
+    path_to_dataset: str
+        Path to a dataset (the format depends on the type of dataset)
+    """
+    def __init__(self,
+                data_splits: Dict[str, PosixPath],
+                model_name_or_path: str,
+                tokenizer_name_or_path: str,
+                max_seq_length: int = 128,
+                train_batch_size: int = 32,
+                eval_batch_size: int = 32
+                ):
+        super().__init__()
+        self.model_name_or_path = model_name_or_path
+        self.tokenizer_name_or_path = tokenizer_name_or_path
+        self.datasets = {}
+        self.num_labels = None
+        self.max_seq_length = max_seq_length
+        self.train_batch_size = train_batch_size
+        self.eval_batch_size = eval_batch_size
+
+    @abstractmethod
+    def _load_dataset_split(self,
+                            path_to_dataset: str,
+                            **kwargs):
+        """
+        Method to load a dataset split as a part of self.dataset.
+        Must be implemented on each class that inherits from this one.
+
+        Parameters
+        ----------
+        path_to_dataset: str
+            Path to the dataset to load (it comes from the class constructor).
+        """
+        pass
+
+    def _load_dataset_splits(self):
+        """
+        Method to load all the dataset splits to self.dataset.
+
+        Parameters
+        ----------
+        None
+        """
+        for split, path in self.data_splits.items():
+            self.datasets[split] = self._load_dataset_split(path)
+
+    def prepare_data(self):
+        AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
+
+    def train_dataloader(self):
+        """
+        Returns a DataLoader object for the train split of the dataset.
+
+        Parameters
+        ----------
+        None
+        """
+        return DataLoader(self.datasets["train"], batch_size=self.train_batch_size, shuffle=True)
+
+    def dev_dataloader(self):
+        """
+        Returns one or more DataLoader object/s for the dev split of the
+        dataset.
+
+        Parameters
+        ----------
+        None
+        """
+        if len(self.eval_splits) == 1:
+            return DataLoader(self.datasets["eval"], batch_size=self.eval_batch_size)
+        elif len(self.eval_splits) > 1:
+            return [DataLoader(self.datasets[x], batch_size=self.eval_batch_size) for x in self.eval_splits]
+
+    def test_dataloader(self):
+        """
+        Returns one or more DataLoader object/s for the test split of the
+        dataset.
+
+        Parameters
+        ----------
+        None
+        """
+        if len(self.eval_splits) == 1:
+            return DataLoader(self.datasets["test"], batch_size=self.eval_batch_size)
+        elif len(self.eval_splits) > 1:
+            return [DataLoader(self.datasets[x], batch_size=self.eval_batch_size) for x in self.eval_splits]

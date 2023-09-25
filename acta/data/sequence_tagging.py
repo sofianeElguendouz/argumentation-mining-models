@@ -38,7 +38,9 @@ class SequenceTaggingDataset(BaseDataset):
         Refer to BaseDataset.
     path_to_dataset: str
         Refer to BaseDataset.
-    labels: Optional[Dict[str, int]]
+    label2id: Optional[Dict[str, int]]
+        Refer to BaseDataset.
+    id2label: Optional[Dict[int, str]]
         Refer to BaseDataset.
     delimiter: str
         Character used to split the columns in the dataset (comma, colon, tab,
@@ -68,29 +70,31 @@ class SequenceTaggingDataset(BaseDataset):
     def __init__(self,
                  tokenizer_model_or_path: str,
                  path_to_dataset: str,
-                 labels: Optional[Dict[str, int]] = None,
+                 label2id: Optional[Dict[str, int]] = None,
+                 id2label: Optional[Dict[int, str]] = None,
                  delimiter: str = '\t',
                  token_position: int = 1,
                  label_position: int = 4,
                  use_extension_label: bool = True,
                  copy_label_to_subtoken: bool = True):
         super().__init__(tokenizer_model_or_path=tokenizer_model_or_path,
-                         path_to_dataset=path_to_dataset, labels=labels,
+                         path_to_dataset=path_to_dataset,
+                         label2id=label2id, id2label=id2label,
                          delimiter=delimiter, token_position=token_position,
                          label_position=label_position)
 
         self.use_extension_label = use_extension_label
         self.copy_label_to_subtoken = copy_label_to_subtoken
         if self.use_extension_label:
-            if 'X' not in self.labels:
+            if 'X' not in self.label2id:
                 # Add the extended label
-                self.labels['X'] = len(self.labels)
-            if 'PAD' not in self.labels:
+                self.label2id['X'] = len(self.label2id)
+            if 'PAD' not in self.label2id:
                 # Add the pad label (after the extension label)
-                self.labels['PAD'] = len(self.labels)
-        elif 'PAD' not in self.labels:
+                self.label2id['PAD'] = len(self.label2id)
+        elif 'PAD' not in self.label2id:
             # The pad label will be -100
-            self.labels['PAD'] = -100
+            self.label2id['PAD'] = -100
 
     def _load_dataset(self,
                       path_to_dataset: str,
@@ -128,11 +132,11 @@ class SequenceTaggingDataset(BaseDataset):
                     sentence_tokens.append(line[token_position])
                     sentence_labels.append(line[label_position])
 
-        if missing_labels:
+        if self.label2id is None:
             # To get all the available labels we have to traverse each list of
             # labels (remember there is a list of labels per data point, not a
             # single label)
-            self.labels = {
+            self.label2id = {
                 lbl: idx for idx, lbl in
                 enumerate(  # Get label and index
                     sorted(  # From the sorted list
@@ -148,7 +152,7 @@ class SequenceTaggingDataset(BaseDataset):
         self.dataset = [
             {
                 "tokens": sentence['tokens'],
-                "labels": [self.labels[lbl] for lbl in sentence['labels']]
+                "labels": [self.label2id[lbl] for lbl in sentence['labels']]
             } for sentence in sentences
         ]
 
@@ -188,8 +192,8 @@ class SequenceTaggingDataset(BaseDataset):
                 # we use a special extension_label that, dependind on configuration can be a value
                 # for a extension label X or a special PAD label equal to -100 (in case of using
                 # regular transformers and not CRF which requires all labels to be accounted).
-                extension_label = self.labels['X'] if self.use_extension_label\
-                    else self.labels['PAD']
+                extension_label = self.label2id['X'] if self.use_extension_label\
+                    else self.label2id['PAD']
                 sentence_labels.append(extension_label)
             elif wid != previous_wid:
                 # If it is the first subtoken of a work, use its corresponding label
@@ -204,9 +208,9 @@ class SequenceTaggingDataset(BaseDataset):
                     # comparable experimentation as to wether it is useful or not
                     sentence_labels.append(sentence["labels"][wid])
                 elif self.use_extension_label:
-                    sentence_labels.append(self.labels['X'])
+                    sentence_labels.append(self.label2id['X'])
                 else:
-                    sentence_labels.append(self.labels['PAD'])
+                    sentence_labels.append(self.label2id['PAD'])
             previous_wid = wid
 
         tokenized_sentence['labels'] = sentence_labels

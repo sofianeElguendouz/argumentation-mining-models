@@ -40,7 +40,9 @@ class RelationClassificationDataset(BaseDataset):
         Refer to BaseDataset.
     path_to_dataset: str
         Refer to BaseDataset.
-    labels: Optional[Dict[str, int]]
+    label2id: Optional[Dict[str, int]]
+        Refer to BaseDataset.
+    id2label: Optional[Dict[int, str]]
         Refer to BaseDataset.
     delimiter: str
         Character used to split the columns in the dataset (comma, colon, tab,
@@ -49,23 +51,24 @@ class RelationClassificationDataset(BaseDataset):
         Character that is used when a delimiter is present in a column but it
         shouldn't split the column.
     label_prefix: str
-        A prefix to be removed from the labels in the dataset.
+        A prefix to be removed from the label2id in the dataset.
     """
     def __init__(self,
                  tokenizer_model_or_path: str,
                  path_to_dataset: str,
-                 labels: Optional[Dict[str, int]] = None,
+                 label2id: Optional[Dict[str, int]] = None,
+                 id2label: Optional[Dict[int, str]] = None,
                  delimiter: str = '\t',
                  quotechar: str = '"',
                  label_prefix: str = '__label__'):
         super().__init__(tokenizer_model_or_path=tokenizer_model_or_path,
-                         path_to_dataset=path_to_dataset, labels=labels,
+                         path_to_dataset=path_to_dataset,
+                         label2id=label2id, id2label=id2label,
                          delimiter=delimiter, quotechar=quotechar,
                          label_prefix=label_prefix)
 
     def _load_dataset(self,
                       path_to_dataset: str,
-                      missing_labels: bool = False,
                       delimiter: str = '\t',
                       quotechar: str = '"',
                       label_prefix: str = '__label__'):
@@ -82,10 +85,10 @@ class RelationClassificationDataset(BaseDataset):
         ]
 
         target = [d[0].lstrip(label_prefix) for d in dataset]
-        if missing_labels:
-            self.labels = {lbl: idx for idx, lbl in enumerate(sorted(set(target)))}
+        if self.label2id is None:
+            self.label2id = {lbl: idx for idx, lbl in enumerate(sorted(set(target)))}
 
-        self.target = [self.labels[tgt] for tgt in target]
+        self.target = [self.label2id[tgt] for tgt in target]
 
     def __len__(self) -> int:
         return len(self.dataset)

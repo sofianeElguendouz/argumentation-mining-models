@@ -38,10 +38,11 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
-                 warmup_steps: int = 0):
-        super().__init__(model_name_or_path, id2label, label2id,
+                 warmup_steps: int = 0,
+                 **kwargs):
+        super().__init__(model_name_or_path, id2label, label2id, masked_label,
                          learning_rate, weight_decay, adam_epsilon,
-                         warmup_steps)
+                         warmup_steps, **kwargs)
 
         self.model = AutoModel.from_pretrained(
             model_name_or_path,

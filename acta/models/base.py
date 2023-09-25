@@ -54,7 +54,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
-                 warmup_steps: int = 0):
+                 warmup_steps: int = 0,
+                 **kwargs):
         super().__init__()
         self.save_hyperparameters()
 

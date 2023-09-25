@@ -18,10 +18,11 @@ Hugging Face Transformers models.
 """
 
 import lightning.pytorch as pl
+import torch.Tensor
 
 from abc import ABCMeta
 from transformers import AdamW, AutoConfig, get_linear_schedule_with_warmup
-from typing import Dict
+from typing import Any, Dict
 
 
 class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
@@ -63,6 +64,38 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                                                  num_labels=len(id2label),
                                                  id2label=id2label,
                                                  label2id=label2id)
+
+    def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
+        """
+        Loss function calculation for a single batch of data.
+        Returns the Tensor for the los value.
+
+        Parameters
+        ----------
+        batch: Dict[str, Any]
+            The same batch passed to `*_step`. It should have all the data
+            needed to run the loss. In particular it is expected to have a
+            `labels` key with the ground truth labels.
+
+        Returns
+        -------
+        torch.Tensor
+            The loss for the batch.
+        """
+        raise NotImplementedError()
+
+    def training_step(self, batch, batch_idx):
+        return self._loss(batch)
+
+    def test_step(self, batch, batch_idx):
+        loss = self._loss(batch)
+        self.log("test_loss", loss)
+        return {"test_loss": loss}
+
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        loss = self._loss(batch)
+        self.log("val_loss", loss)
+        return {"val_loss": loss}
 
     def configure_optimizers(self):
         """

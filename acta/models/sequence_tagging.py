@@ -21,7 +21,7 @@ import torch.nn as nn
 
 from torchcrf import CRF
 from transformers import AutoModel
-from typing import Dict
+from typing import Any, Dict
 
 from .base import BaseTransformerModule
 
@@ -66,18 +66,9 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
 
         return path, emissions
 
-    def _loss(self, batch):
+    def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         labels = batch.pop('labels')
         path, emissions = self(**batch)
         mask = (labels != self.hparams.masked_label).to(torch.uint8)
 
         return -self.crf(emissions, labels, mask=mask)
-
-    def training_step(self, batch, batch_idx):
-        return self._loss(batch)
-
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        self.log("val_loss", self._loss(batch))
-
-    def test_step(self, batch, batch_idx):
-        self.log("test_loss", self._loss(batch))

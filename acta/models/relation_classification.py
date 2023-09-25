@@ -16,8 +16,10 @@ Pytorch Lightning Module for Relation Classfication.
    limitations under the License.
 """
 
+import torch.Tensor
+
 from transformers import AutoModelForSequenceClassification
-from typing import Dict
+from typing import Any, Dict
 
 from .base import BaseTransformerModule
 
@@ -47,14 +49,5 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
     def forward(self, **inputs):
         return self.model(**inputs)
 
-    def training_step(self, batch, batch_idx):
-        outputs = self(**batch)
-        return outputs.loss
-
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        outputs = self(**batch)
-        self.log("val_loss", outputs.loss)
-
-    def test_step(self, batch, batch_idx):
-        outputs = self(**batch)
-        self.log("test_loss", outputs.loss)
+    def _loss(self, batch: Any) -> torch.Tensor:
+        return self(**batch).loss

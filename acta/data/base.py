@@ -120,7 +120,6 @@ class BaseDataModule(LightningDataModule):
                  datasets_config: Dict[str, Any] = dict(max_seq_lenght=128),
                  train_batch_size: int = 8,
                  eval_batch_size: int = 8,
-                 cache_dir: Optional[str] = None,
                  evaluation_split: Optional[str] = None):
         super().__init__()
         self.tokenizer_name_or_path = tokenizer_name_or_path

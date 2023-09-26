@@ -24,7 +24,7 @@ from pathlib import PosixPath
 from lightning.pytorch import LightningDataModule
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     id2label: Optional[Dict[int, str]]
         The reverse mapping of label2id that map the indices to the labels. If
         not given it will be taken by reversing label2id.
-    max_seq_lenght: Optional[int]
+    max_seq_length: Optional[int]
         If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
     truncation_strategy: str
         What truncation strategy to use (by default truncates the longest
@@ -117,11 +117,12 @@ class BaseDataModule(LightningDataModule):
                  data_splits: Dict[str, PosixPath],
                  tokenizer_name_or_path: str,
                  tokenizer_config: Dict[str, Any] = dict(use_fast=True),
-                 datasets_config: Dict[str, Any] = dict(max_seq_lenght=128),
+                 datasets_config: Dict[str, Any] = dict(max_seq_length=128),
                  train_batch_size: int = 8,
                  eval_batch_size: int = 8,
                  evaluation_split: Optional[str] = None):
         super().__init__()
+        self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
         self.datasets = {}
@@ -130,6 +131,18 @@ class BaseDataModule(LightningDataModule):
         self.eval_batch_size = eval_batch_size
         self.tokenizer_config = tokenizer_config
         self.evaluation_split = evaluation_split
+
+    @property
+    @abstractmethod
+    def collate_fn(self) -> Callable:
+        """
+        Returns the collate function. It depends on the type of dataset.
+
+        Returns
+        -------
+        Callable
+            A function or class with the __call__ method implemented.
+        """
 
     @property
     @abstractmethod
@@ -228,18 +241,22 @@ class BaseDataModule(LightningDataModule):
         """
         Returns a DataLoader object for the train split of the dataset.
         """
-        return DataLoader(self.datasets["train"],
+        return DataLoader(dataset=self.datasets["train"],
                           batch_size=self.train_batch_size,
-                          shuffle=True)
+                          shuffle=True,
+                          drop_last=False,
+                          collate_fn=self.collate_fn)
 
     def val_dataloader(self) -> Optional[DataLoader]:
         """
         Returns the dataloader for validation (if it exists) otherwise returns None.
         """
         if "validation" in self.datasets:
-            return DataLoader(self.datasets["validation"],
+            return DataLoader(dataset=self.datasets["validation"],
                               batch_size=self.eval_batch_size,
-                              shuffle=False)
+                              shuffle=False,
+                              drop_last=False,
+                              collate_fn=self.collate_fn)
         else:
             return None
 
@@ -249,9 +266,11 @@ class BaseDataModule(LightningDataModule):
         evaluation split, returns None.
         """
         if self.evaluation_split:
-            return DataLoader(self.datasets[self.evaluation_split],
+            return DataLoader(dataset=self.datasets[self.evaluation_split],
                               batch_size=self.eval_batch_size,
-                              shuffle=False)
+                              shuffle=False,
+                              drop_last=False,
+                              collate_fn=self.collate_fn)
         else:
             return None
 
@@ -261,8 +280,10 @@ class BaseDataModule(LightningDataModule):
         prediction). If there's no evaluation split, returns None.
         """
         if self.evaluation_split:
-            return DataLoader(self.datasets[self.evaluation_split],
+            return DataLoader(dataset=self.datasets[self.evaluation_split],
                               batch_size=self.eval_batch_size,
-                              shuffle=False)
+                              shuffle=False,
+                              drop_last=False,
+                              collate_fn=self.collate_fn)
         else:
             return None

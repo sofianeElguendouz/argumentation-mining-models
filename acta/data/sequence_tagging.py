@@ -18,9 +18,9 @@ CONLL based column format for Sequence Tagging (Token Classification).
 """
 
 from itertools import chain
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorForTokenClassification
 from transformers.tokenization_utils_base import BatchEncoding
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 from .base import BaseDataset, BaseDataModule
 
@@ -265,6 +265,10 @@ class SequenceTaggingDataModule(BaseDataModule):
     DataModule for sequence tagging (i.e. classify each token in a sequence of
     tokens).
     """
+    @property
+    def collate_fn(self) -> Callable:
+        return DataCollatorForTokenClassification(self.tokenizer)
+
     @property
     def labels(self) -> Dict[str, int]:
         return {

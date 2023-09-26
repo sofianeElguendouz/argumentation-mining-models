@@ -19,9 +19,9 @@ column based data (csv, tsv) for Relation classification.
 
 import csv
 
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers.tokenization_utils_base import BatchEncoding
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 from .base import BaseDataset, BaseDataModule
 
@@ -133,6 +133,10 @@ class RelationClassificationDataModule(BaseDataModule):
     Data module for classification of relationship between a pairs of sentences
     (e.g. supports, attacks, etc.).
     """
+    @property
+    def collate_fn(self) -> Callable:
+        return DataCollatorWithPadding(self.tokenizer)
+
     @property
     def labels(self) -> Dict[str, int]:
         return {

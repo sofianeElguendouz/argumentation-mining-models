@@ -102,20 +102,21 @@ class BaseDataModule(LightningDataModule):
         splits.
     tokenizer_name_or_path: str
         Name or path to a Hugging Face Tokenizer to load.
+    tokenizer_config: Dict[str, Any]
+        Extra tokenizer specific config (e.g. do_lower_case, cache_dir, use_fast, etc)
     datasets_config: Dict[str, Any]
         A set of configurations specific for the datasets.
     train_batch_size: int
         Size of the training batches (per GPU/CPU if distributed).
     eval_batch_size: int
         Size of the evaluation batches (per GPU/CPU if distributed).
-    cache_dir: Optional[str]
-        Directory to store the tokenizers.
     evaluation_split: Optional[str]
         The split to use for evaluation.
     """
     def __init__(self,
                  data_splits: Dict[str, PosixPath],
                  tokenizer_name_or_path: str,
+                 tokenizer_config: Dict[str, Any] = dict(use_fast=True),
                  datasets_config: Dict[str, Any] = dict(max_seq_lenght=128),
                  train_batch_size: int = 8,
                  eval_batch_size: int = 8,
@@ -123,13 +124,12 @@ class BaseDataModule(LightningDataModule):
                  evaluation_split: Optional[str] = None):
         super().__init__()
         self.tokenizer_name_or_path = tokenizer_name_or_path
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path,
-                                                       use_fast=True, cache_dir=cache_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
         self.datasets = {}
         self.datasets_config = datasets_config
         self.train_batch_size = train_batch_size
         self.eval_batch_size = eval_batch_size
-        self.cache_dir = cache_dir
+        self.tokenizer_config = tokenizer_config
         self.evaluation_split = evaluation_split
 
     @property
@@ -170,8 +170,7 @@ class BaseDataModule(LightningDataModule):
         """
         Method to prepare data. It is called only once across all devices.
         """
-        AutoTokenizer.from_pretrained(self.tokenizer_name_or_path, use_fast=True,
-                                      cache_dir=self.cache_dir)
+        AutoTokenizer.from_pretrained(self.tokenizer_name_or_path, **self.tokenizer_config)
 
     def setup(self, stage: str):
         """

@@ -150,10 +150,14 @@ class BaseDataModule(LightningDataModule):
         from the DataModule labels (e.g. by having extra labels such as the
         extension label `X` or the padding label `PAD`).
 
+        It will try to access based on a priority. First the train dataset, if
+        it's not present, it will use the evaluation_split dataset. An finally
+        it will check for any dataset present.
+
         If there's no dataset it raises an error.
         """
         if len(self.datasets) == 0:
-            raise ValueError("The datasets are not set")
+            raise ValueError("The datasets are not present. Please run `setup`.")
 
         if 'train' in self.datasets:
             # First try with the training dataset
@@ -164,6 +168,30 @@ class BaseDataModule(LightningDataModule):
         else:
             # Return whatever dataset that is present as a last resource
             return list(self.datasets.values())[0].label2id
+
+    @property
+    def id2label(self) -> Dict[str, int]:
+        """
+        Proxy method to access one of the datasets `id2label`.
+
+        It will try to access based on a priority. First the train dataset, if
+        it's not present, it will use the evaluation_split dataset. An finally
+        it will check for any dataset present.
+
+        If there's no dataset it raises an error.
+        """
+        if len(self.datasets) == 0:
+            raise ValueError("The datasets are not present. Please run `setup`.")
+
+        if 'train' in self.datasets:
+            # First try with the training dataset
+            return self.datasets['train'].id2label
+        elif self.evaluation_split in self.datasets:
+            # Check the evaluation dataset
+            return self.datasets[self.evaluation_split].id2label
+        else:
+            # Return whatever dataset that is present as a last resource
+            return list(self.datasets.values())[0].id2label
 
     def prepare_data(self):
         """

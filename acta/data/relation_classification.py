@@ -67,19 +67,21 @@ class RelationClassificationDataset(BaseDataset):
                  truncation_strategy: str = 'longest_first',
                  delimiter: str = '\t',
                  quotechar: str = '"',
-                 label_prefix: str = '__label__'):
+                 label_prefix: str = '__label__',
+                 **kwargs):
         super().__init__(tokenizer=tokenizer,
                          path_to_dataset=path_to_dataset,
                          label2id=label2id, id2label=id2label,
                          max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
                          delimiter=delimiter, quotechar=quotechar,
-                         label_prefix=label_prefix)
+                         label_prefix=label_prefix, **kwargs)
 
     def _load_dataset(self,
                       path_to_dataset: str,
                       delimiter: str = '\t',
                       quotechar: str = '"',
-                      label_prefix: str = '__label__'):
+                      label_prefix: str = '__label__',
+                      **kwargs):
         with open(path_to_dataset, 'rt') as fh:
             csv_reader = csv.reader(fh, delimiter=delimiter, quotechar=quotechar)
             dataset = list(csv_reader)

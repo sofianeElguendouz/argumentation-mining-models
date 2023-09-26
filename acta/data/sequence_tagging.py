@@ -83,13 +83,14 @@ class SequenceTaggingDataset(BaseDataset):
                  token_position: int = 1,
                  label_position: int = 4,
                  use_extension_label: bool = True,
-                 copy_label_to_subtoken: bool = True):
+                 copy_label_to_subtoken: bool = True,
+                 **kwargs):
         super().__init__(tokenizer=tokenizer,
                          path_to_dataset=path_to_dataset,
                          label2id=label2id, id2label=id2label,
                          max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
                          delimiter=delimiter, token_position=token_position,
-                         label_position=label_position)
+                         label_position=label_position, **kwargs)
 
         self.use_extension_label = use_extension_label
         self.copy_label_to_subtoken = copy_label_to_subtoken
@@ -109,7 +110,8 @@ class SequenceTaggingDataset(BaseDataset):
                       missing_labels: bool = False,
                       delimiter: str = '\t',
                       token_position: str = 1,
-                      label_position: str = 4):
+                      label_position: str = 4,
+                      **kwargs):
         """
         Loads a dataset in CONLL format. The CONLL file is expected to have the
         traditional format of one word/token (with its corresponding columns,

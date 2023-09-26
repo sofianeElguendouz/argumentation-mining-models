@@ -22,7 +22,7 @@ import torch.Tensor
 
 from abc import ABCMeta
 from transformers import AdamW, AutoConfig, get_linear_schedule_with_warmup
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
@@ -39,6 +39,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     label2id: Dict[str, int]
         A mapping between labels and their corresponding indices (must be the
         reverse map of id2label).
+    config_name_or_path: Optional[str]
+        If given, uses this configuration instead of the one from the model.
     learning_rate: float
         The learning rate.
     weight_decay: float
@@ -52,6 +54,7 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                  model_name_or_path: str,
                  id2label: Dict[int, str],
                  label2id: Dict[str, int],
+                 config_name_or_path: Optional[str] = None,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
@@ -60,7 +63,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         super().__init__()
         self.save_hyperparameters()
 
-        self.config = AutoConfig.from_pretrained(model_name_or_path,
+        config_name_or_path = config_name_or_path if config_name_or_path else model_name_or_path
+        self.config = AutoConfig.from_pretrained(config_name_or_path,
                                                  num_labels=len(id2label),
                                                  id2label=id2label,
                                                  label2id=label2id)

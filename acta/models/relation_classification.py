@@ -19,7 +19,7 @@ Pytorch Lightning Module for Relation Classfication.
 import torch.Tensor
 
 from transformers import AutoModelForSequenceClassification
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .base import BaseTransformerModule
 
@@ -32,12 +32,13 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
                  model_name_or_path: str,
                  id2label: Dict[int, str],
                  label2id: Dict[str, int],
+                 config_name_or_path: Optional[str] = None,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
                  warmup_steps: int = 0,
                  **kwargs):
-        super().__init__(model_name_or_path, id2label, label2id,
+        super().__init__(model_name_or_path, id2label, label2id, config_name_or_path,
                          learning_rate, weight_decay, adam_epsilon,
                          warmup_steps, **kwargs)
 
@@ -51,3 +52,6 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
 
     def _loss(self, batch: Any) -> torch.Tensor:
         return self(**batch).loss
+
+    def predict_step(self, batch, batch_idx):
+        pass

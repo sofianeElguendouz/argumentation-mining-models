@@ -21,7 +21,7 @@ import torch.nn as nn
 
 from torchcrf import CRF
 from transformers import AutoModel
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .base import BaseTransformerModule
 
@@ -34,14 +34,15 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
                  model_name_or_path: str,
                  id2label: Dict[int, str],
                  label2id: Dict[str, int],
+                 config_name_or_path: Optional[str] = None,
                  masked_label: int = -100,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
                  warmup_steps: int = 0,
                  **kwargs):
-        super().__init__(model_name_or_path, id2label, label2id, masked_label,
-                         learning_rate, weight_decay, adam_epsilon,
+        super().__init__(model_name_or_path, id2label, label2id, config_name_or_path,
+                         masked_label, learning_rate, weight_decay, adam_epsilon,
                          warmup_steps, **kwargs)
 
         self.model = AutoModel.from_pretrained(

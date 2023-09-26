@@ -18,7 +18,7 @@ Hugging Face Transformers models.
 """
 
 import lightning.pytorch as pl
-import torch.Tensor
+import torch
 
 from abc import ABCMeta
 from transformers import AdamW, AutoConfig, get_linear_schedule_with_warmup

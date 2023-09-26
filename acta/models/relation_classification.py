@@ -16,7 +16,7 @@ Pytorch Lightning Module for Relation Classfication.
    limitations under the License.
 """
 
-import torch.Tensor
+import torch
 
 from transformers import AutoModelForSequenceClassification
 from typing import Any, Dict, Optional

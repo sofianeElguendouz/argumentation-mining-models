@@ -103,7 +103,7 @@ def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
 
 
 def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                args: argparse.NameSpace) -> pl.ModelCheckpoint:
+                args: argparse.Namespace) -> ModelCheckpoint:
     """
     Trains a model and returns the checkpoints for that model.
     """

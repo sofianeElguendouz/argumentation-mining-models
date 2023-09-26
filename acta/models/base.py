@@ -41,6 +41,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         reverse map of id2label).
     config_name_or_path: Optional[str]
         If given, uses this configuration instead of the one from the model.
+    cache_dir: Optional[str]
+        Directory to store the models.
     learning_rate: float
         The learning rate.
     weight_decay: float
@@ -55,6 +57,7 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                  id2label: Dict[int, str],
                  label2id: Dict[str, int],
                  config_name_or_path: Optional[str] = None,
+                 cache_dir: Optional[str] = None,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
@@ -67,7 +70,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         self.config = AutoConfig.from_pretrained(config_name_or_path,
                                                  num_labels=len(id2label),
                                                  id2label=id2label,
-                                                 label2id=label2id)
+                                                 label2id=label2id,
+                                                 cache_dir=cache_dir)
 
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         """

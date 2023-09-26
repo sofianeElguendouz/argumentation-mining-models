@@ -201,15 +201,20 @@ class SequenceTaggingDataset(BaseDataset):
         sentence_labels = []
         word_ids = tokenized_sentence.word_ids()
         previous_wid = None
-        for wid in word_ids:
+        for wid, attmsk in zip(word_ids, tokenized_sentence['attention_mask']):
             if wid is None:
-                # For special tokens ([CLS], [SEP], <s>, etc) that don't have an assigned label
-                # we use a special extension_label that, dependind on configuration can be a value
-                # for a extension label X or a special PAD label equal to -100 (in case of using
-                # regular transformers and not CRF which requires all labels to be accounted).
-                extension_label = self.label2id['X'] if self.use_extension_label\
-                    else self.label2id['PAD']
-                sentence_labels.append(extension_label)
+                if attmsk == 1:
+                    # For special tokens ([CLS], [SEP], <s>, etc) that don't have an assigned label
+                    # we use a special extension_label that, dependind on configuration can be a
+                    # value for a extension label X or a special PAD label equal to -100 (in case
+                    # of using regular transformers and not CRF which requires all labels to be
+                    # accounted).
+                    extension_label = self.label2id['X'] if self.use_extension_label\
+                        else self.label2id['PAD']
+                    sentence_labels.append(extension_label)
+                if attmsk == 0:
+                    # This is a token for padding, assign the corresponding PAD label
+                    sentence_labels.append(self.label2id['PAD'])
             elif wid != previous_wid:
                 # If it is the first subtoken of a work, use its corresponding label
                 sentence_labels.append(sentence["labels"][wid])
@@ -267,7 +272,8 @@ class SequenceTaggingDataModule(BaseDataModule):
     """
     @property
     def collate_fn(self) -> Callable:
-        return DataCollatorForTokenClassification(self.tokenizer)
+        return DataCollatorForTokenClassification(self.tokenizer,
+                                                  label_pad_token_id=self.label2id['PAD'])
 
     @property
     def labels(self) -> Dict[str, int]:

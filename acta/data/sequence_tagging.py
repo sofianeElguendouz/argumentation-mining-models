@@ -18,6 +18,7 @@ CONLL based column format for Sequence Tagging (Token Classification).
 """
 
 from itertools import chain
+from transformers import AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Dict, List, Optional, Union
 
@@ -34,7 +35,7 @@ class SequenceTaggingDataset(BaseDataset):
 
     Parameters
     ----------
-    tokenizer_model_or_path: str
+    tokenizer: AutoTokenizer
         Refer to BaseDataset.
     path_to_dataset: str
         Refer to BaseDataset.
@@ -42,6 +43,10 @@ class SequenceTaggingDataset(BaseDataset):
         Refer to BaseDataset.
     id2label: Optional[Dict[int, str]]
         Refer to BaseDataset.
+    max_seq_length: Optional[int]
+        Refer to BaseDataset.
+    truncation_strategy: str
+        Refer to BaseDataset
     delimiter: str
         Character used to split the columns in the dataset (comma, colon, tab,
         etc).
@@ -68,18 +73,21 @@ class SequenceTaggingDataset(BaseDataset):
         it, otherwise it will use the special 'PAD' label assigned to -100.
     """
     def __init__(self,
-                 tokenizer_model_or_path: str,
+                 tokenizer: AutoTokenizer,
                  path_to_dataset: str,
                  label2id: Optional[Dict[str, int]] = None,
                  id2label: Optional[Dict[int, str]] = None,
+                 max_seq_length: Optional[int] = None,
+                 truncation_strategy: str = 'longest_first',
                  delimiter: str = '\t',
                  token_position: int = 1,
                  label_position: int = 4,
                  use_extension_label: bool = True,
                  copy_label_to_subtoken: bool = True):
-        super().__init__(tokenizer_model_or_path=tokenizer_model_or_path,
+        super().__init__(tokenizer=tokenizer,
                          path_to_dataset=path_to_dataset,
                          label2id=label2id, id2label=id2label,
+                         max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
                          delimiter=delimiter, token_position=token_position,
                          label_position=label_position)
 
@@ -180,8 +188,13 @@ class SequenceTaggingDataset(BaseDataset):
             The tokenized sentence as a dictionary with the corresponding key,
             value pairs needed to be processes by a Transformer Module.
         """
-        tokenized_sentence = self.tokenizer(sentence["tokens"], truncation=True,
-                                            is_split_into_words=True)
+        tokenized_sentence = self.tokenizer(
+            sentence["tokens"],
+            padding='max_length' if self.max_seq_length else False,
+            truncation=self.truncation_strategy,
+            max_length=self.max_seq_length,
+            is_split_into_words=True
+        )
 
         sentence_labels = []
         word_ids = tokenized_sentence.word_ids()
@@ -244,34 +257,34 @@ class SequenceTaggingDataset(BaseDataset):
         else:
             return self._tokenize_and_align_labels(self.dataset[idx])
 
+
 class SequenceTaggingDataModule(BaseDataModule):
     """
-    Data module for sequence tagging (i.e. classify each token in a sequence of
+    DataModule for sequence tagging (i.e. classify each token in a sequence of
     tokens).
-
-    Parameters
-    ----------
-    model_model_or_path: str
-        Name or path to a Hugging Face Model to load.
-    tokenizer_model_or_path: str
-        Name or path to a Hugging Face Tokenizer to load.
-    path_to_dataset: str
-        Path to a dataset (the format depends on the type of dataset)
     """
-    def _load_dataset_split(self,
-                            path: str,
-                            **kwargs):
-        """
-        Method to load a dataset split as a part of self.dataset.
-        Must be implemented on each class that inherits from this one.
+    @property
+    def labels(self) -> Dict[str, int]:
+        return {
+            "O": 0,
+            "B-Claim": 1,
+            "I-Claim": 2,
+            "B-Premise": 3,
+            "I-Premise": 4,
+            "B-Marker": 5,
+            "I-Marker": 6,
+            "B-Treatment": 7,
+            "I-Treatment": 8,
+            "B-Disease": 9,
+            "I-Disease": 10,
+            "B-Diagnostics": 11,
+            "I-Diagnostics": 12
+        }
 
-        Parameters
-        ----------
-        path: str
-            Path to the dataset split to load (it comes from the class 
-            constructor).
-        """
-        dataset = SequenceTaggingDataset(tokenizer_model_or_path = self.tokenizer_name_or_path,
-                                                path_to_dataset = path # Adjust path when we have a final project structure
-                                        )
-        return dataset
+    def _load_dataset_split(self, path_to_dataset: str) -> SequenceTaggingDataset:
+        return SequenceTaggingDataset(
+            tokenizer=self.tokenizer,
+            path_to_dataset=path_to_dataset,
+            label2id=self.labels,
+            **self.datasets_config
+        )

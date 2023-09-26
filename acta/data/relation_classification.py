@@ -19,6 +19,7 @@ column based data (csv, tsv) for Relation classification.
 
 import csv
 
+from transformers import AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Dict, Optional
 
@@ -36,7 +37,7 @@ class RelationClassificationDataset(BaseDataset):
 
     Parameters
     ----------
-    tokenizer_model_or_path: str
+    tokenizer: AutoTokenizer
         Refer to BaseDataset.
     path_to_dataset: str
         Refer to BaseDataset.
@@ -44,6 +45,10 @@ class RelationClassificationDataset(BaseDataset):
         Refer to BaseDataset.
     id2label: Optional[Dict[int, str]]
         Refer to BaseDataset.
+    max_seq_length: Optional[int]
+        Refer to BaseDataset.
+    truncation_strategy: str
+        Refer to BaseDataset
     delimiter: str
         Character used to split the columns in the dataset (comma, colon, tab,
         etc).
@@ -54,16 +59,19 @@ class RelationClassificationDataset(BaseDataset):
         A prefix to be removed from the label2id in the dataset.
     """
     def __init__(self,
-                 tokenizer_model_or_path: str,
+                 tokenizer: AutoTokenizer,
                  path_to_dataset: str,
                  label2id: Optional[Dict[str, int]] = None,
                  id2label: Optional[Dict[int, str]] = None,
+                 max_seq_length: Optional[int] = None,
+                 truncation_strategy: str = 'longest_first',
                  delimiter: str = '\t',
                  quotechar: str = '"',
                  label_prefix: str = '__label__'):
-        super().__init__(tokenizer_model_or_path=tokenizer_model_or_path,
+        super().__init__(tokenizer=tokenizer,
                          path_to_dataset=path_to_dataset,
                          label2id=label2id, id2label=id2label,
+                         max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
                          delimiter=delimiter, quotechar=quotechar,
                          label_prefix=label_prefix)
 
@@ -99,43 +107,42 @@ class RelationClassificationDataset(BaseDataset):
         if isinstance(idx, slice):
             text = [d['text'] for d in data]
             text_pair = [d['text_pair'] for d in data]
-            tokenized_data = self.tokenizer(text=text, text_pair=text_pair,
-                                            padding=True, truncation=True)
+            tokenized_data = self.tokenizer(
+                text=text, text_pair=text_pair,
+                padding='max_length' if self.max_seq_length else True,
+                truncation=self.truncation_strategy,
+                max_length=self.max_seq_length
+            )
         else:
-            tokenized_data = self.tokenizer(**data, truncation=True)
+            tokenized_data = self.tokenizer(
+                **data,
+                padding='max_length' if self.max_seq_length else False,
+                truncation=self.truncation_strategy,
+                max_length=self.max_seq_length
+            )
 
         tokenized_data['label'] = self.target[idx]
 
         return tokenized_data
 
+
 class RelationClassificationDataModule(BaseDataModule):
     """
     Data module for classification of relationship between a pairs of sentences
     (e.g. supports, attacks, etc.).
-
-    Parameters
-    ----------
-    model_model_or_path: str
-        Name or path to a Hugging Face Model to load.
-    tokenizer_model_or_path: str
-        Name or path to a Hugging Face Tokenizer to load.
-    path_to_dataset: str
-        Path to a dataset (the format depends on the type of dataset)
     """
-    def _load_dataset_split(self,
-                            path: str,
-                            **kwargs):
-        """
-        Method to load a dataset split as a part of self.dataset.
-        Must be implemented on each class that inherits from this one.
+    @property
+    def labels(self) -> Dict[str, int]:
+        return {
+            "noRel": 0,
+            "Support": 1,
+            "Attack": 2
+        }
 
-        Parameters
-        ----------
-        path: str
-            Path to the dataset split to load (it comes from the class 
-            constructor).
-        """
-        dataset = RelationClassificationDataset(tokenizer_model_or_path = self.tokenizer_name_or_path,
-                                                        path_to_dataset = path # Adjust path when we have a final project structure
-                                                )
-        return dataset
+    def _load_dataset_split(self, path_to_dataset: str) -> RelationClassificationDataset:
+        return RelationClassificationDataset(
+            tokenizer=self.tokenizer,
+            path_to_dataset=path_to_dataset,
+            label2id=self.labels,
+            **self.datasets_config
+        )

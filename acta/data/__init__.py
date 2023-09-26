@@ -2,10 +2,10 @@
 Data utilities module. It has the Datasets and LightningDataModules of the ACTA library.
 """
 
-from .relation_classification import RelationClassificationDataset
-from .sequence_tagging import SequenceTaggingDataset
+from .relation_classification import RelationClassificationDataModule
+from .sequence_tagging import SequenceTaggingDataModule
 
 __all__ = [
-    "RelationClassificationDataset",
-    "SequenceTaggingDataset"
+    "RelationClassificationDataModule",
+    "SequenceTaggingDataModule"
 ]

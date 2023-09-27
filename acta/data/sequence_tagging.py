@@ -98,12 +98,15 @@ class SequenceTaggingDataset(BaseDataset):
             if 'X' not in self.label2id:
                 # Add the extended label
                 self.label2id['X'] = len(self.label2id)
+                self.id2label[self.label2id['X']] = 'X'
             if 'PAD' not in self.label2id:
                 # Add the pad label (after the extension label)
                 self.label2id['PAD'] = len(self.label2id)
+                self.id2label[self.label2id['PAD']] = 'PAD'
         elif 'PAD' not in self.label2id:
             # The pad label will be -100
             self.label2id['PAD'] = -100
+            self.id2label[self.label2id['PAD']] = 'PAD'
 
     def _load_dataset(self,
                       path_to_dataset: str,
@@ -303,6 +306,11 @@ class SequenceTaggingDataModule(BaseDataModule):
         batch of instances (List[List[int]]) into the corresponding list of
         tokens with their associated prediction (one per token). If true
         labels are provided, it will add them as well.
+
+        TODO: This method doesn't make any realignment of tokens and labels, it
+        doesn't regroup the subtokens and simply returns each subtoken with the
+        corresponding label of the subtoken. For the next iteration we need to
+        address this.
 
         Parameters
         ----------

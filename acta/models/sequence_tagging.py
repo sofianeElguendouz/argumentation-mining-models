@@ -32,8 +32,8 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     """
     def __init__(self,
                  model_name_or_path: str,
-                 id2label: Dict[int, str],
                  label2id: Dict[str, int],
+                 id2label: Dict[int, str],
                  config_name_or_path: Optional[str] = None,
                  cache_dir: Optional[str] = None,
                  masked_label: int = -100,
@@ -42,9 +42,13 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
                  adam_epsilon: float = 1e-8,
                  warmup_steps: int = 0,
                  **kwargs):
-        super().__init__(model_name_or_path, id2label, label2id, config_name_or_path, cache_dir,
-                         masked_label, learning_rate, weight_decay, adam_epsilon,
-                         warmup_steps, **kwargs)
+        super().__init__(model_name_or_path=model_name_or_path,
+                         label2id=label2id, id2label=id2label,
+                         config_name_or_path=config_name_or_path,
+                         cache_dir=cache_dir, masked_label=masked_label,
+                         learning_rate=learning_rate, weight_decay=weight_decay,
+                         adam_epsilon=adam_epsilon, warmup_steps=warmup_steps,
+                         **kwargs)
 
         self.model = AutoModel.from_pretrained(
             model_name_or_path,
@@ -82,6 +86,6 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
 
         return {
             "input_ids": batch.input_ids.tolist(),
-            "labels": labels.to_list() if labels else None,
-            "predictions": path.to_list()
+            "labels": labels.tolist() if labels is not None else None,
+            "predictions": path.tolist()
         }

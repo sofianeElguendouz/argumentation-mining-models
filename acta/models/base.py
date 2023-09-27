@@ -33,12 +33,12 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     ----------
     model_name_or_path: str
         The path or the name of a Transformer Model (from the HF repository).
-    id2label: Dict[int, str]
-        A mapping between indices and their corresponding labels (must be the
-        reverse map of label2id).
     label2id: Dict[str, int]
         A mapping between labels and their corresponding indices (must be the
         reverse map of id2label).
+    id2label: Dict[int, str]
+        A mapping between indices and their corresponding labels (must be the
+        reverse map of label2id).
     config_name_or_path: Optional[str]
         If given, uses this configuration instead of the one from the model.
     cache_dir: Optional[str]
@@ -54,8 +54,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     """
     def __init__(self,
                  model_name_or_path: str,
-                 id2label: Dict[int, str],
                  label2id: Dict[str, int],
+                 id2label: Dict[int, str],
                  config_name_or_path: Optional[str] = None,
                  cache_dir: Optional[str] = None,
                  learning_rate: float = 5e-5,
@@ -68,9 +68,9 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
 
         config_name_or_path = config_name_or_path if config_name_or_path else model_name_or_path
         self.config = AutoConfig.from_pretrained(config_name_or_path,
-                                                 num_labels=len(id2label),
-                                                 id2label=id2label,
+                                                 num_labels=len(label2id),
                                                  label2id=label2id,
+                                                 id2label=id2label,
                                                  cache_dir=cache_dir)
 
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:

@@ -40,7 +40,8 @@ MODELS = {
     'roberta': 'roberta-base',
     'scibert-monolog': 'monologg/scibert_scivocab_uncased',
     'scibert-allenai': 'allenai/scibert_scivocab_uncased',
-    'xlm-roberta': 'xlm-roberta-base'
+    'xlm-roberta': 'xlm-roberta-base',
+    'tiny-bert': 'prajjwal1/bert-tiny'  # Only for debug purposes
 }
 TASKS = {
     'rel-class': (RelationClassificationDataModule, RelationClassificationTransformerModule, 'tsv'),
@@ -172,7 +173,7 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
     decoded_predictions = [
         decoded_prediction
         for batch_prediction in trainer.predict(model, datamodule=data_module)
-        for decoded_prediction in data_module.decode_prediction(**batch_prediction)
+        for decoded_prediction in data_module.decode_predictions(**batch_prediction)
     ]
     output_dir = Path(args.output_dir)
     os.makedirs(output_dir / 'results', exist_ok=True)
@@ -237,7 +238,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                 # Ignore this model for now, it will run late
                 continue
             evaluate_model(data_module,
-                           TASKS[args.task_name][1].load_from_checkpoint(checkpoint_file),
+                           TASKS[args.task_type][1].load_from_checkpoint(checkpoint_file),
                            args, trainer, checkpoint_file.name.split('.ckpt')[0])
 
     model_name = args.model if args.model in MODELS else os.path.basename(args.model)
@@ -299,7 +300,7 @@ if __name__ == "__main__":
                         default="auto",
                         help="What device to use as accelerator (cpu, gpu, tpu, etc).")
     parser.add_argument("--num-devices",
-                        default="auto",
+                        default=-1,
                         type=int,
                         help="Number of devices to use. If not given selects automatically.")
     parser.add_argument("--epochs",
@@ -435,6 +436,12 @@ if __name__ == "__main__":
         logger.error("There's no validation file for early stopping")
         sys.exit(1)
 
+    if args.model == 'tiny-bert' and not args.debug:
+        logger.error("The model `tiny-bert` is only available for debug mode")
+        sys.exit(1)
+
+    args.num_devices = args.num_devices if args.num_devices > 0 else "auto"
+
     # Setup distant debugging if needed
     if args.server_ip and args.server_port:
         # Distant debugging
@@ -457,9 +464,16 @@ if __name__ == "__main__":
     # Set random seed
     pl.seed_everything(args.random_seed)
 
-    data_module = TASKS[args.task][0](
+    if args.tokenizer:
+        tokenizer_name_or_path = args.tokenizer
+    elif args.model in MODELS:
+        tokenizer_name_or_path = MODELS[args.model]
+    else:
+        tokenizer_name_or_path = args.tokenizer
+
+    data_module = TASKS[args.task_type][0](
         data_splits=data_splits,
-        tokenizer_name_or_path=args.tokenizer if args.tokenizer else args.model,
+        tokenizer_name_or_path=tokenizer_name_or_path,
         tokenizer_config=dict(
             cache_dir=args.cache_dir,
             do_lower_case=args.lower_case,
@@ -475,11 +489,16 @@ if __name__ == "__main__":
     data_module.prepare_data()
     data_module.setup('fit')
 
-    if Path(args.start_from_checkpoint).is_file():
-        model = TASKS[args.task][1].load_from_checkpoint(args.load_from_checkpoint)
+    if args.model in MODELS:
+        model_name_or_path = MODELS[args.model]
     else:
-        model = TASKS[args.task][1](
-            model_name_or_path=args.model,
+        model_name_or_path = args.model
+
+    if args.load_from_checkpoint is not None and Path(args.load_from_checkpoint).is_file():
+        model = TASKS[args.task_type][1].load_from_checkpoint(args.load_from_checkpoint)
+    else:
+        model = TASKS[args.task_type][1](
+            model_name_or_path=model_name_or_path,
             id2label=data_module.id2label,
             label2id=data_module.label2id,
             config_name_or_path=args.config,

@@ -25,7 +25,8 @@ import sys
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from pathlib import Path, PosixPath
-from typing import Dict
+from sklearn import metrics as skmetrics
+from typing import Dict, Optional
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
@@ -103,7 +104,7 @@ def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
 
 
 def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                args: argparse.Namespace) -> ModelCheckpoint:
+                args: argparse.Namespace) -> pl.Trainer:
     """
     Trains a model and returns the checkpoints for that model.
     """
@@ -145,9 +146,10 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         accumulate_grad_batches=args.gradient_accumulation_steps,
         gradient_clip_val=args.max_grad_norm if args.max_grad_norm else None,
         limit_train_batches=0.1 if args.debug else 1.0,  # Use only 10% of training for debug
-        limit_test_batches=0.5 if args.debug else 1.0,
-        limit_val_batches=0 if not args.validation else 1.0,
-        num_sanity_val_steps=0 if not args.validation else 2
+        limit_test_batches=0.1 if args.debug else 1.0,
+        limit_predict_batches=0.1 if args.debug else 1.0,
+        limit_val_batches=0 if not args.validation else 0.1 if args.debug else 1.0,
+        num_sanity_val_steps=0 if not args.validation else 1 if args.debug else 2
     )
 
     logger.info("Starting model training routine")
@@ -155,18 +157,91 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     logger.info("Finished model training routine")
 
     logger.info("Saving last model checkpoint")
-    trainer.save_checkpoint(output_dir / args.checkpoint_path / (model_name + "-final.ckpt"))
+    trainer.save_checkpoint(output_dir / args.checkpoint_path / f"{model_name}-final.ckpt")
 
-    return model_checkpoints
+    return trainer
+
+
+def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
+                   args: argparse.Namespace, trainer: pl.Trainer, model_name: str):
+    """
+    Evaluates a single model and write its outputs.
+    """
+    trainer.test(model, datamodule=data_module)
+
+    decoded_predictions = [
+        decoded_prediction
+        for batch_prediction in trainer.predict(model, datamodule=data_module)
+        for decoded_prediction in data_module.decode_prediction(**batch_prediction)
+    ]
+    output_dir = Path(args.output_dir)
+    os.makedirs(output_dir / 'results', exist_ok=True)
+
+    if args.task_type == 'rel-class':
+        # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
+        true_labels = []
+        pred_labels = []
+        for prediction in decoded_predictions:
+            true_labels.extend(prediction[0])
+            pred_labels.append(prediction[1])
+        with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
+            print(skmetrics.classification_report(true_labels, pred_labels,
+                                                  labels=data_module.label2id.keys()), file=fh)
+        with open(output_dir / 'results' / f'{model_name}_predictions.tsv', 'w') as fh:
+            print('true\tpredicted\tsentence1\tsentence2', file=fh)
+            print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
+    elif args.task_type == 'seq-tag':
+        # Predictions are a list of lists of tuples, where each tuple has the form
+        # (token, predicted_label, true_label)
+        true_labels = []
+        pred_labels = []
+        for sentence in decoded_predictions:
+            true_labels.extend([token[2] for token in sentence])
+            pred_labels.extend([token[1] for token in sentence])
+        with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
+            print(skmetrics.classification_report(true_labels, pred_labels,
+                                                  labels=data_module.label2id.keys()), file=fh)
+        with open(output_dir / 'results' / f'{model_name}_predictions.conll', 'w') as fh:
+            print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
+                               for sentence in decoded_predictions]))
 
 
 def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                    model_checkpoints: ModelCheckpoint, args: argparse.Namespace):
+                    args: argparse.Namespace, trainer: Optional[pl.Trainer] = None):
     """
     Evaluates the model on the evaluation dataset. Depending on the options, it
     will evaluate only in the final model or in all the models in the
     checkpoints.
     """
+    output_dir = Path(args.output_dir)
+    if trainer is None:
+        # Build a trainer for prediction purposes
+        model_logger = TensorBoardLogger(save_dir=output_dir / args.logging_dir)
+        trainer = pl.Trainer(
+            accelerator=args.accelerator,
+            devices=args.num_devices,
+            precision='16-mixed' if args.fp16 else '32-true',
+            logger=model_logger,
+            max_epochs=1,
+            max_steps=-1,
+            limit_train_batches=0.1 if args.debug else 1.0,  # Use only 10% of training for debug
+            limit_test_batches=0.1 if args.debug else 1.0,
+            limit_predict_batches=0.1 if args.debug else 1.0,
+            limit_val_batches=0 if not args.validation else 0.1 if args.debug else 1.0,
+            num_sanity_val_steps=0 if not args.validation else 1 if args.debug else 2
+        )
+
+    if args.eval_all_checkpoints:
+        for checkpoint_file in (output_dir / args.checkpoint_path).glob('*.ckpt'):
+            if checkpoint_file.name.endswith('-final.ckpt'):
+                # Ignore this model for now, it will run late
+                continue
+            evaluate_model(data_module,
+                           TASKS[args.task_name][1].load_from_checkpoint(checkpoint_file),
+                           args, trainer, checkpoint_file.name.split('.ckpt')[0])
+
+    model_name = args.model if args.model in MODELS else os.path.basename(args.model)
+    evaluate_model(data_module, model, args, trainer, model_name)
 
 
 if __name__ == "__main__":
@@ -417,7 +492,7 @@ if __name__ == "__main__":
         )
 
     if args.train:
-        model_checkpoints = train_model(data_module, model, args)
+        trainer = train_model(data_module, model, args)
 
     if args.evaluation_split:
-        evaluate_models(data_module, model, model_checkpoints, args)
+        evaluate_models(data_module, model, args, trainer if args.train else None)

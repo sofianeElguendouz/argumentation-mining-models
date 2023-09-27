@@ -21,7 +21,7 @@ import csv
 
 from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers.tokenization_utils_base import BatchEncoding
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from .base import BaseDataset, BaseDataModule
 
@@ -144,6 +144,76 @@ class RelationClassificationDataModule(BaseDataModule):
             "Support": 1,
             "Attack": 2
         }
+
+    def decode_predictions(self,
+                           input_ids: Union[List[int], List[List[int]]],
+                           predictions: Union[int, List[int]],
+                           labels: Union[int, List[int], None] = None)\
+            -> Union[Tuple[str], List[Tuple[str]]]:
+        """
+        Decodes the input_ids, which can be a single instance (List[int]) or a
+        batch of instances (List[List[int]]) into its corresponding pair of
+        sentences. It appends the predicted labels (using id2label) and, if
+        present, the true labels.
+
+        Parameters
+        ----------
+        input_ids: List[int] | List[List[int]]
+            The tokens ids of a single instance or a batch of instances.
+        predictions: int | List[Int]
+            The predicted label for a single instance or the list of predicted
+            labels for a batch of instances.
+        labels: int | List[int], optional
+            If given, the true labels.
+
+        Return
+        ------
+        Tuple[str], List[Tuple[str]]
+            Depending on the type of input, it can return a single tuple
+            or a list of tuples (if a batch of instances). The tuple
+            has the form: (predicted_label, sentence1, sentence2) or
+            (true_label, predicted_label, sentence1, sentence2) if the
+            true label is given.
+        """
+        if isinstance(input_ids[0], int):
+            # Single input
+            sentence1 = self.tokenizer.decode(
+                input_ids[:input_ids.index(self.tokenizer.sep_token_id)],
+                skip_special_tokens=True
+            )
+            sentence2 = self.tokenizer.decode(
+                input_ids[input_ids.index(self.tokenizer.sep_token_id):],
+                skip_special_tokens=True
+            )
+            predicted_label = self.id2label[predictions]
+            if labels is not None:
+                true_label = self.id2label[labels]
+                return true_label, predicted_label, sentence1, sentence2
+            else:
+                return predicted_label, sentence1, sentence2
+        else:
+            # Batch of inputs
+            if labels is None:
+                return [
+                    (self.id2label[prediction],
+                     self.tokenizer.decode(input_id[:input_id.index(self.tokenizer.sep_token_id)],
+                                           skip_special_tokens=True),
+                     self.tokenizer.decode(input_id[input_id.index(self.tokenizer.sep_token_id):],
+                                           skip_special_tokens=True)
+                     )
+                    for prediction, input_id in zip(predictions, input_ids)
+                ]
+            else:
+                return [
+                    (self.id2label[label],
+                     self.id2label[prediction],
+                     self.tokenizer.decode(input_id[:input_id.index(self.tokenizer.sep_token_id)],
+                                           skip_special_tokens=True),
+                     self.tokenizer.decode(input_id[input_id.index(self.tokenizer.sep_token_id):],
+                                           skip_special_tokens=True)
+                     )
+                    for label, prediction, input_id in zip(labels, predictions, input_ids)
+                ]
 
     def _load_dataset_split(self, path_to_dataset: str) -> RelationClassificationDataset:
         return RelationClassificationDataset(

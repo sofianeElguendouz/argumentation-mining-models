@@ -20,7 +20,7 @@ CONLL based column format for Sequence Tagging (Token Classification).
 from itertools import chain
 from transformers import AutoTokenizer, DataCollatorForTokenClassification
 from transformers.tokenization_utils_base import BatchEncoding
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from .base import BaseDataset, BaseDataModule
 
@@ -292,6 +292,88 @@ class SequenceTaggingDataModule(BaseDataModule):
             "B-Diagnostics": 11,
             "I-Diagnostics": 12
         }
+
+    def decode_predictions(self,
+                           input_ids: Union[List[int], List[List[int]]],
+                           predictions: Union[List[int], List[List[int]]],
+                           labels: Union[List[int], List[List[int]], None] = None)\
+            -> Union[List[Tuple[str]], List[List[Tuple[str]]]]:
+        """
+        Decodes the input_ids, which can be a single instance (List[int]) or a
+        batch of instances (List[List[int]]) into the corresponding list of
+        tokens with their associated prediction (one per token). If true
+        labels are provided, it will add them as well.
+
+        Parameters
+        ----------
+        input_ids: List[int] | List[List[int]]
+            The tokens ids of a single instance or a batch of instances.
+        predictions: List[int] | List[List[int]]
+            The predicted labels for a single instance or the list of predicted
+            labels for a batch of instances.
+        labels: List[int] | List[List[int]], optional
+            If given, the true labels.
+
+        Return
+        ------
+        List[Tuple[str]], List[List[Tuple[str]]]
+            Depending on the type of input, it can return the predictions of a
+            single input (List[Tuple[str]]) or for a batch of inputs
+            (List[List[Tuple[str]]]). The tuple has the form: (token,
+            predicted_label) or (token, predicte_label, true_label) if the true
+            label is given.
+        """
+        if isinstance(input_ids[0], int):
+            special_tokens = self.tokenizer.get_special_tokens_mask(input_ids,
+                                                                    already_has_special_tokens=True)
+            if labels is None:
+                return [
+                    (
+                        self.tokenizer.convert_ids_to_tokens(token),
+                        self.id2label[prediction]
+                    )
+                    for token, prediction, mask in zip(input_ids, predictions, special_tokens)
+                    if mask == 0
+                ]
+            else:
+                return [
+                    (
+                        self.tokenizer.convert_ids_to_tokens(token),
+                        self.id2label[prediction],
+                        self.id2label[label]
+                    )
+                    for token, prediction, label, mask in zip(input_ids, predictions,
+                                                              labels, special_tokens)
+                    if mask == 0
+                ]
+        else:
+            outputs = []
+            if labels is None:
+                for stokens, spredictions in zip(input_ids, predictions):
+                    special_tokens = self.tokenizer.get_special_tokens_mask(
+                        stokens, already_has_special_tokens=True
+                    )
+                    outputs.append([(
+                            self.tokenizer.convert_ids_to_tokens(token),
+                            self.id2label[prediction]
+                        ) for token, prediction, mask in zip(stokens, spredictions,
+                                                             special_tokens)
+                          if mask == 0
+                    ])
+            else:
+                for stokens, spredictions, slabels in zip(input_ids, predictions, labels):
+                    special_tokens = self.tokenizer.get_special_tokens_mask(
+                        stokens, already_has_special_tokens=True
+                    )
+                    outputs.append([(
+                            self.tokenizer.convert_ids_to_tokens(token),
+                            self.id2label[prediction],
+                            self.id2label[label]
+                        ) for token, prediction, label, mask in zip(stokens, spredictions, slabels,
+                                                                    special_tokens)
+                          if mask == 0
+                    ])
+            return outputs
 
     def _load_dataset_split(self, path_to_dataset: str) -> SequenceTaggingDataset:
         return SequenceTaggingDataset(

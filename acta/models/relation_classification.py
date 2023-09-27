@@ -55,5 +55,12 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
     def _loss(self, batch: Any) -> torch.Tensor:
         return self(**batch).loss
 
-    def predict_step(self, batch, batch_idx):
-        pass
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+        labels = batch.pop('labels', None)
+        predictions = self(**batch).logits.argmax()
+
+        return {
+            "input_ids": batch.input_ids.tolist(),
+            "labels": labels.to_list() if labels else None,
+            "predictions": predictions
+        }

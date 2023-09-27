@@ -75,3 +75,13 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         mask = (labels != self.hparams.masked_label).to(torch.uint8)
 
         return -self.crf(emissions, labels, mask=mask)
+
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+        labels = batch.pop('labels', None)
+        path, emissions = self(**batch)
+
+        return {
+            "input_ids": batch.input_ids.tolist(),
+            "labels": labels.to_list() if labels else None,
+            "predictions": path.to_list()
+        }

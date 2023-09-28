@@ -183,11 +183,13 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         true_labels = []
         pred_labels = []
         for prediction in decoded_predictions:
-            true_labels.extend(prediction[0])
+            true_labels.append(prediction[0])
             pred_labels.append(prediction[1])
         with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
             print(skmetrics.classification_report(true_labels, pred_labels,
-                                                  labels=data_module.label2id.keys()), file=fh)
+                                                  labels=list(data_module.label2id.keys()),
+                                                  zero_division=0),
+                  file=fh)
         with open(output_dir / 'results' / f'{model_name}_predictions.tsv', 'w') as fh:
             print('true\tpredicted\tsentence1\tsentence2', file=fh)
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
@@ -201,7 +203,9 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
             pred_labels.extend([token[1] for token in sentence])
         with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
             print(skmetrics.classification_report(true_labels, pred_labels,
-                                                  labels=data_module.label2id.keys()), file=fh)
+                                                  labels=list(data_module.label2id.keys()),
+                                                  zero_division=0),
+                  file=fh)
         with open(output_dir / 'results' / f'{model_name}_predictions.conll', 'w') as fh:
             print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
                                for sentence in decoded_predictions]))

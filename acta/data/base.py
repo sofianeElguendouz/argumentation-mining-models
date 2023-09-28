@@ -22,6 +22,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from pathlib import PosixPath
 from lightning.pytorch import LightningDataModule
+from multiprocessing import cpu_count
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 from typing import Any, Callable, Dict, Optional
@@ -112,6 +113,8 @@ class BaseDataModule(LightningDataModule):
         Size of the evaluation batches (per GPU/CPU if distributed).
     evaluation_split: Optional[str]
         The split to use for evaluation.
+    num_workers: int
+        Number of workers to use. If < 0 uses all cpus.
     """
     def __init__(self,
                  data_splits: Dict[str, PosixPath],
@@ -120,7 +123,8 @@ class BaseDataModule(LightningDataModule):
                  datasets_config: Dict[str, Any] = dict(max_seq_length=128),
                  train_batch_size: int = 8,
                  eval_batch_size: int = 8,
-                 evaluation_split: Optional[str] = None):
+                 evaluation_split: Optional[str] = None,
+                 num_workers: int = -1):
         super().__init__()
         self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
@@ -131,6 +135,11 @@ class BaseDataModule(LightningDataModule):
         self.eval_batch_size = eval_batch_size
         self.tokenizer_config = tokenizer_config
         self.evaluation_split = evaluation_split
+        self.num_workers = num_workers if num_workers > 0 else cpu_count()
+
+        # Silencing the warning to pad with fast tokenizer since with Lightning this is
+        # not possible unless we pad beforehand
+        self.tokenizer.deprecation_warnings["Asking-to-pad-a-fast-tokenizer"] = True
 
     @property
     @abstractmethod
@@ -245,7 +254,8 @@ class BaseDataModule(LightningDataModule):
                           batch_size=self.train_batch_size,
                           shuffle=True,
                           drop_last=False,
-                          collate_fn=self.collate_fn)
+                          collate_fn=self.collate_fn,
+                          num_workers=self.num_workers)
 
     def val_dataloader(self) -> Optional[DataLoader]:
         """
@@ -256,7 +266,8 @@ class BaseDataModule(LightningDataModule):
                               batch_size=self.eval_batch_size,
                               shuffle=False,
                               drop_last=False,
-                              collate_fn=self.collate_fn)
+                              collate_fn=self.collate_fn,
+                              num_workers=self.num_workers)
         else:
             return None
 
@@ -270,7 +281,8 @@ class BaseDataModule(LightningDataModule):
                               batch_size=self.eval_batch_size,
                               shuffle=False,
                               drop_last=False,
-                              collate_fn=self.collate_fn)
+                              collate_fn=self.collate_fn,
+                              num_workers=self.num_workers)
         else:
             return None
 
@@ -284,6 +296,7 @@ class BaseDataModule(LightningDataModule):
                               batch_size=self.eval_batch_size,
                               shuffle=False,
                               drop_last=False,
-                              collate_fn=self.collate_fn)
+                              collate_fn=self.collate_fn,
+                              num_workers=self.num_workers)
         else:
             return None

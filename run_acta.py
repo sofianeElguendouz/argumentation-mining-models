@@ -307,6 +307,10 @@ if __name__ == "__main__":
                         default=-1,
                         type=int,
                         help="Number of devices to use. If not given selects automatically.")
+    parser.add_argument("--num-workers",
+                        default=-1,
+                        type=int,
+                        help="Number of workers to use for DataLoaders. Set to -1 to use all cpus.")
     parser.add_argument("--epochs",
                         default=3,
                         type=int,
@@ -473,7 +477,7 @@ if __name__ == "__main__":
     elif args.model in MODELS:
         tokenizer_name_or_path = MODELS[args.model]
     else:
-        tokenizer_name_or_path = args.tokenizer
+        tokenizer_name_or_path = args.model
 
     data_module = TASKS[args.task_type][0](
         data_splits=data_splits,
@@ -488,7 +492,8 @@ if __name__ == "__main__":
         ),
         train_batch_size=args.train_batch_size,
         eval_batch_size=args.eval_batch_size,
-        evaluation_split=args.evaluation_split
+        evaluation_split=args.evaluation_split,
+        num_workers=args.num_workers
     )
     data_module.prepare_data()
     data_module.setup('fit')

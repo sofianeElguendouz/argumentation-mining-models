@@ -21,7 +21,7 @@ import lightning.pytorch as pl
 import torch
 
 from abc import ABCMeta
-from transformers import AdamW, AutoConfig, get_linear_schedule_with_warmup
+from transformers import AutoConfig, get_linear_schedule_with_warmup
 from typing import Any, Dict, Optional
 
 
@@ -122,9 +122,9 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                 "weight_decay": 0.0
             }
         ]
-        optimizer = AdamW(optimizer_grouped_parameters,
-                          lr=self.hparams.learning_rate,
-                          eps=self.hparams.adam_epsilon)
+        optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
+                                      lr=self.hparams.learning_rate,
+                                      eps=self.hparams.adam_epsilon)
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,

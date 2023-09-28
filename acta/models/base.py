@@ -22,7 +22,7 @@ import torch
 
 from abc import ABCMeta
 from transformers import AutoConfig, get_linear_schedule_with_warmup
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
@@ -72,6 +72,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                                                  label2id=label2id,
                                                  id2label=id2label,
                                                  cache_dir=cache_dir)
+        # To cache the test outputs and run metrics at end of test
+        self.test_output_cache: List[Dict[str, Union[float, List[float]]]] = []
 
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         """
@@ -92,13 +94,19 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    def _accumulate_test_results(self):
+        test_loss = []
+        true_labels = []
+        pred_labels = []
+        for test_output in self.test_output_cache:
+            test_loss.append(test_output['test_loss'])
+            true_labels.extend(test_output['true_labels'])
+            pred_labels.extend(test_output['pred_labels'])
+        self.test_output_cache = []
+        return test_loss, true_labels, pred_labels
+
     def training_step(self, batch, batch_idx):
         return self._loss(batch)
-
-    def test_step(self, batch, batch_idx):
-        loss = self._loss(batch)
-        self.log("test_loss", loss)
-        return {"test_loss": loss}
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         loss = self._loss(batch)

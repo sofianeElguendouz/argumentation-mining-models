@@ -19,6 +19,31 @@ Utilities module for the ACTA library.
 import sys
 
 from lightning.pytorch.callbacks import TQDMProgressBar
+from sklearn.metrics import accuracy_score, f1_score
+from typing import Dict, List, Optional, Union
+
+
+def compute_metrics(true_labels: List[Union[int, str]],
+                    pred_labels: List[Union[int, str]],
+                    limited_labels: Optional[List[Union[int, str]]] = None) -> Dict[str, float]:
+    """
+    Helper function to compute F1-score and Accuracy metrics
+    """
+    outputs = {
+        "accuracy": accuracy_score(true_labels, pred_labels),
+        "f1_score_macro": f1_score(true_labels, pred_labels, average="macro", zero_division=0),
+        "f1_score_micro": f1_score(true_labels, pred_labels, average="micro", zero_division=0)
+    }
+
+    if limited_labels is not None:
+        # F1 macro and micro averages for specific classes
+        outputs["f1_score_macro_limited"] = f1_score(
+            true_labels, pred_labels, average="macro", zero_division=0, labels=limited_labels
+        )
+        outputs["f1_score_micro_limited"] = f1_score(
+            true_labels, pred_labels, average="micro", zero_division=0, labels=limited_labels
+        )
+    return outputs
 
 
 class TTYAwareProgressBar(TQDMProgressBar):

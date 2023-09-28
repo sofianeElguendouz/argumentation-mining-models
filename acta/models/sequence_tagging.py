@@ -16,6 +16,7 @@ Sequence Tagging Transformer Module for Token Classification in Argumentation Mi
    limitations under the License.
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -24,6 +25,7 @@ from transformers import AutoModel
 from typing import Any, Dict, Optional
 
 from .base import BaseTransformerModule
+from ..utils import compute_metrics
 
 
 class SequenceTaggingTransformerModule(BaseTransformerModule):
@@ -79,6 +81,37 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         mask = (labels != self.hparams.masked_label)
 
         return -self.crf(emissions, labels, mask=mask)
+
+    def test_step(self, batch, batch_idx):
+        labels = batch.pop('labels')
+        path, emissions = self(**batch)
+        mask = (labels != self.hparams.masked_label)
+
+        test_loss = -self.crf(emissions, labels, mask=mask)
+
+        # Remove the masked labels
+        non_mask_labels = torch.masked_select(labels, mask).tolist()
+        non_masked_predictions = torch.masked_select(path, mask).tolist()
+        assert len(non_mask_labels) == len(non_masked_predictions)
+
+        self.test_output_cache.append({
+            "test_loss": test_loss.item(),
+            "true_labels": non_mask_labels,
+            "pred_labels": non_masked_predictions,
+        })
+
+    def on_test_epoch_end(self):
+        test_loss, true_labels, pred_labels = self._accumulate_test_results()
+
+        # F1 macro and micro averages for classes different from the most common
+        # one (this assumes the most common class is "0") and different from
+        # masked label
+        outputs = compute_metrics(true_labels, pred_labels,
+                                  [label for label in self.config.id2label
+                                   if label != 0 and label != self.hparams.masked_label])
+        outputs["test_loss"] = np.mean(test_loss)
+        self.log_dict(outputs)
+        return outputs
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         labels = batch.pop('labels', None)

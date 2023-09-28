@@ -163,3 +163,7 @@ cython_debug/
 *env/
 .vscode/
 data/casimedicos/
+/*cache*/
+/*output*/
+/*logs*/
+test*.ipynb

@@ -106,56 +106,59 @@ def get_data_splits(input_dir: PosixPath, task_type: str) -> Dict[str, PosixPath
 
 
 def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                args: argparse.Namespace) -> Tuple[pl.Trainer, ModelCheckpoint]:
+                config: argparse.Namespace) -> Tuple[pl.Trainer, ModelCheckpoint]:
     """
     Trains a model and returns the checkpoints for that model.
     """
-    model_name = args.model if args.model in MODELS else os.path.basename(args.model)
-    model_name = f"{model_name}_{args.task_type}"
+    model_name = config.model if config.model in MODELS else os.path.basename(config.model)
+    model_name = f"{model_name}_{config.task_type}"
     callbacks = []
 
-    model_logger = TensorBoardLogger(save_dir=args.output_dir / args.logging_dir)
+    model_logger = TensorBoardLogger(
+        save_dir=config.output_dir / config.logging_dir,
+        name=config.timestamp
+    )
 
     model_checkpoints = ModelCheckpoint(
-        dirpath=args.output_dir / args.checkpoint_path,
+        dirpath=config.output_dir / config.checkpoint_path,
         filename=model_name + "_{epoch:02d}_{step:05d}",
         save_top_k=-1,  # Save all models
-        every_n_train_steps=args.save_every_n_steps
+        every_n_train_steps=config.save_every_n_steps
     )
     callbacks.append(model_checkpoints)
 
-    progress_bar = TTYAwareProgressBar(refresh_rate=args.log_every_n_steps)
+    progress_bar = TTYAwareProgressBar(refresh_rate=config.log_every_n_steps)
     callbacks.append(progress_bar)
 
-    if args.early_stopping:
+    if config.early_stopping:
         early_stopping = EarlyStopping(
             monitor='val_loss',
             min_delta=1e-6,
-            patience=args.early_stopping
+            patience=config.early_stopping
         )
         callbacks.append(early_stopping)
 
     trainer = pl.Trainer(
-        accelerator=args.accelerator,
-        devices=args.num_devices,
-        precision='16-mixed' if args.fp16 else '32-true',
+        accelerator=config.accelerator,
+        devices=config.num_devices,
+        precision='16-mixed' if config.fp16 else '32-true',
         logger=model_logger,
         callbacks=callbacks,
-        max_epochs=args.epochs if args.max_steps < 0 else None,
-        max_steps=args.max_steps,
-        val_check_interval=args.log_every_n_steps,
-        log_every_n_steps=args.log_every_n_steps,
-        accumulate_grad_batches=args.gradient_accumulation_steps,
-        gradient_clip_val=args.max_grad_norm if args.max_grad_norm else None,
-        limit_train_batches=0.1 if args.debug else 1.0,  # Use only 10% of training for debug
-        limit_test_batches=0.1 if args.debug else 1.0,
-        limit_predict_batches=0.1 if args.debug else 1.0,
-        limit_val_batches=0 if not args.validation else 0.1 if args.debug else 1.0,
-        num_sanity_val_steps=0 if not args.validation else 1 if args.debug else 2
+        max_epochs=config.epochs if config.max_steps < 0 else None,
+        max_steps=config.max_steps,
+        val_check_interval=config.log_every_n_steps,
+        log_every_n_steps=config.log_every_n_steps,
+        accumulate_grad_batches=config.gradient_accumulation_steps,
+        gradient_clip_val=config.max_grad_norm if config.max_grad_norm else None,
+        limit_train_batches=0.1 if config.debug else 1.0,  # Use only 10% of training for debug
+        limit_test_batches=0.1 if config.debug else 1.0,
+        limit_predict_batches=0.1 if config.debug else 1.0,
+        limit_val_batches=0 if not config.validation else 0.1 if config.debug else 1.0,
+        num_sanity_val_steps=0 if not config.validation else 1 if config.debug else 2
     )
 
     logger.info("Starting model training routine")
-    trainer.fit(model, datamodule=data_module, ckpt_path=args.load_from_checkpoint)
+    trainer.fit(model, datamodule=data_module, ckpt_path=config.load_from_checkpoint)
     logger.info("Finished model training routine")
 
     logger.info("Saving last model checkpoint")
@@ -177,12 +180,12 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
 
 def evaluate_model(data_module: pl.LightningDataModule,
                    model_or_checkpoint: Union[pl.LightningModule, PosixPath],
-                   args: argparse.Namespace, trainer: pl.Trainer, model_name: str):
+                   config: argparse.Namespace, trainer: pl.Trainer, model_name: str):
     """
     Evaluates a single model and write its outputs.
     """
     logger.info(f"Evaluating {model_name}")
-    results_dir = args.output_dir / 'results' / args.timestamp
+    results_dir = config.output_dir / 'results' / config.timestamp
     if isinstance(model_or_checkpoint, pl.LightningModule):
         trainer.test(model=model_or_checkpoint, datamodule=data_module)
         decoded_predictions = [
@@ -200,7 +203,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
             for decoded_prediction in data_module.decode_predictions(**batch_prediction)
         ]
 
-    if args.task_type == 'rel-class':
+    if config.task_type == 'rel-class':
         # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
         true_labels = []
         pred_labels = []
@@ -215,7 +218,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
         with open(results_dir / f'{model_name}_predictions.tsv', 'w') as fh:
             print('true\tpredicted\tsentence1\tsentence2', file=fh)
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
-    elif args.task_type == 'seq-tag':
+    elif config.task_type == 'seq-tag':
         # Predictions are a list of lists of tuples, where each tuple has the form
         # (token, predicted_label, true_label)
         true_labels = []
@@ -234,7 +237,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
 
 
 def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                    args: argparse.Namespace, trainer: Optional[pl.Trainer] = None,
+                    config: argparse.Namespace, trainer: Optional[pl.Trainer] = None,
                     model_checkpoints: Optional[ModelCheckpoint] = None):
     """
     Evaluates the model on the evaluation dataset. Depending on the options, it
@@ -242,33 +245,36 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
     checkpoints.
     """
     # Create the results directory (should be unique)
-    os.makedirs(args.output_dir / 'results' / args.timestamp)
-    model_name = args.model if args.model in MODELS else os.path.basename(args.model)
-    model_name = f"{model_name}_{args.task_type}"
+    os.makedirs(config.output_dir / 'results' / config.timestamp)
+    model_name = config.model if config.model in MODELS else os.path.basename(config.model)
+    model_name = f"{model_name}_{config.task_type}"
 
-    if not args.train:
+    if not config.train:
         # Build a trainer for prediction purposes
-        model_logger = TensorBoardLogger(save_dir=args.output_dir / args.logging_dir)
+        model_logger = TensorBoardLogger(
+            save_dir=config.output_dir / config.logging_dir,
+            name=config.timestamp
+        )
         model_checkpoints = ModelCheckpoint(
-            dirpath=args.output_dir / args.checkpoint_path,
+            dirpath=config.output_dir / config.checkpoint_path,
             filename=model_name + "_{epoch:02d}_{step:05d}"
         )
         trainer = pl.Trainer(
-            accelerator=args.accelerator,
-            devices=args.num_devices,
-            precision='16-mixed' if args.fp16 else '32-true',
+            accelerator=config.accelerator,
+            devices=config.num_devices,
+            precision='16-mixed' if config.fp16 else '32-true',
             logger=model_logger,
             max_epochs=1,
             max_steps=-1,
-            limit_train_batches=0.1 if args.debug else 1.0,  # Use only 10% of training for debug
-            limit_test_batches=0.1 if args.debug else 1.0,
-            limit_predict_batches=0.1 if args.debug else 1.0,
-            limit_val_batches=0 if not args.validation else 0.1 if args.debug else 1.0,
-            num_sanity_val_steps=0 if not args.validation else 1 if args.debug else 2
+            limit_train_batches=0.1 if config.debug else 1.0,  # Use only 10% of training for debug
+            limit_test_batches=0.1 if config.debug else 1.0,
+            limit_predict_batches=0.1 if config.debug else 1.0,
+            limit_val_batches=0 if not config.validation else 0.1 if config.debug else 1.0,
+            num_sanity_val_steps=0 if not config.validation else 1 if config.debug else 2
         )
 
-    if args.eval_all_checkpoints:
-        if args.train:
+    if config.eval_all_checkpoints:
+        if config.train:
             # Training mode, try to fetch the last checkpoint from the symlink and check it
             # corresponds to the actual last training checkpoint from trainer
             last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
@@ -283,10 +289,10 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                                "correspond to the final checkpoint link "
                                f"`{last_model_checkpoint_symlink}`. The evaluation will be done "
                                f"with `{last_model_checkpoint}` as final checkpoint.")
-        elif args.load_from_checkpoint is not None:
+        elif config.load_from_checkpoint is not None:
             # If there was no training, assumes the last checkpoint was loaded by
             # the `--load-from-checkpoint` option
-            last_model_checkpoint = Path(args.load_from_checkpoint)
+            last_model_checkpoint = Path(config.load_from_checkpoint)
         else:
             # There's no information on what the last checkpoint is, it will run
             # all possible checkpoints with a warning
@@ -331,17 +337,17 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                 # Run checkpoint steps previous to last_checkpoint_step
                 # Or run every checkpoint file following the previous warning
                 # (last_checkpoint_step == 0)
-                if args.train:
-                    evaluate_model(data_module, checkpoint_file, args, trainer,
+                if config.train:
+                    evaluate_model(data_module, checkpoint_file, config, trainer,
                                    checkpoint_file.name.split('.ckpt')[0])
                 else:
                     # If there was no training, the trainer requires the loaded model
                     evaluate_model(data_module,
-                                   TASKS[args.task_type][1].load_from_checkpoint(checkpoint_file),
-                                   args, trainer, checkpoint_file.name.split('.ckpt')[0])
+                                   TASKS[config.task_type][1].load_from_checkpoint(checkpoint_file),
+                                   config, trainer, checkpoint_file.name.split('.ckpt')[0])
 
     # Evaluates the final model
-    evaluate_model(data_module, model, args, trainer, f"{model_name}_final")
+    evaluate_model(data_module, model, config, trainer, f"{model_name}_final")
 
 
 if __name__ == "__main__":
@@ -495,139 +501,139 @@ if __name__ == "__main__":
     parser.add_argument("--debug",
                         action="store_true",
                         help="Set for debug mode.")
-    args = parser.parse_args()
+    config = parser.parse_args()
 
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.DEBUG if args.debug else logging.INFO,
+        level=logging.DEBUG if config.debug else logging.INFO,
     )
 
     # Checking pre-conditions
-    if not args.train and not args.evaluation_split:
+    if not config.train and not config.evaluation_split:
         logger.error("The script must be run for training or at least have 1 evaluation split.")
         sys.exit(1)
 
-    if not args.train and args.load_from_checkpoint is None:
+    if not config.train and config.load_from_checkpoint is None:
         logger.warning("Evaluation to be run on model without finetuning.")
 
-    if args.output_dir.exists() and list(args.output_dir.glob('*')) and args.train\
-            and not args.overwrite_output:
-        logger.error(f"Output directory ({args.output_dir}) already exists and is not empty. "
+    if config.output_dir.exists() and list(config.output_dir.glob('*')) and config.train\
+            and not config.overwrite_output:
+        logger.error(f"Output directory ({config.output_dir}) already exists and is not empty. "
                      "Use --overwrite-output to ovewrite the directory (information will be lost).")
         sys.exit()
 
-    if args.model not in MODELS and not Path(args.model).is_file():
-        logger.error(f"The model {args.model} is not available in the list of models: "
+    if config.model not in MODELS and not Path(config.model).is_file():
+        logger.error(f"The model {config.model} is not available in the list of models: "
                      f"{', '.join(MODELS.keys())}; and is not an existing file.")
         sys.exit()
 
-    data_splits = get_data_splits(args.input_dir, args.task_type)
+    data_splits = get_data_splits(config.input_dir, config.task_type)
     if not data_splits:
         logger.error("There are no files to train nor evaluate. Exiting the trainer.")
         sys.exit(1)
 
-    if args.train and 'train' not in data_splits:
+    if config.train and 'train' not in data_splits:
         logger.error("There's no file for training.")
         sys.exit(1)
 
-    if args.evaluation_split and args.evaluation_split not in data_splits:
-        logger.error(f"The evaluation split {args.evaluation_split} file is missing.")
+    if config.evaluation_split and config.evaluation_split not in data_splits:
+        logger.error(f"The evaluation split {config.evaluation_split} file is missing.")
         sys.exit(1)
 
-    if args.validation and 'validation' not in data_splits:
+    if config.validation and 'validation' not in data_splits:
         logger.error("There's no file for validation.")
         sys.exit(1)
 
-    if args.early_stopping and 'validation' not in data_splits:
+    if config.early_stopping and 'validation' not in data_splits:
         logger.error("There's no validation file for early stopping")
         sys.exit(1)
 
-    if args.model == 'tiny-bert' and not args.debug:
+    if config.model == 'tiny-bert' and not config.debug:
         logger.error("The model `tiny-bert` is only available for debug mode")
         sys.exit(1)
 
-    args.num_devices = args.num_devices if args.num_devices > 0 else "auto"
+    config.num_devices = config.num_devices if config.num_devices > 0 else "auto"
 
     # Setup distant debugging if needed
-    if args.server_ip and args.server_port:
+    if config.server_ip and config.server_port:
         # Distant debugging
         # see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
         import ptvsd
 
         logger.debug("Waiting for debugger attach")
-        ptvsd.enable_attach(address=(args.server_ip, args.server_port), redirect_output=True)
+        ptvsd.enable_attach(address=(config.server_ip, config.server_port), redirect_output=True)
         ptvsd.wait_for_attach()
 
     logger.info(
-        f"Accelerator: {args.accelerator}.\n"
-        f"No. of devices: {args.num_devices}.\n"
-        f"16-bit precision training: {args.fp16}."
+        f"Accelerator: {config.accelerator}.\n"
+        f"No. of devices: {config.num_devices}.\n"
+        f"16-bit precision training: {config.fp16}."
     )
 
     # Create output directory
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(config.output_dir, exist_ok=True)
 
     # Timestamp to keep track of results
-    args.timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    config.timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
     # Set random seed
-    pl.seed_everything(args.random_seed)
+    pl.seed_everything(config.random_seed)
 
-    if args.tokenizer:
-        hf_tokenizer_name_or_path = args.tokenizer
-    elif args.model in MODELS:
-        hf_tokenizer_name_or_path = MODELS[args.model]
+    if config.tokenizer:
+        hf_tokenizer_name_or_path = config.tokenizer
+    elif config.model in MODELS:
+        hf_tokenizer_name_or_path = MODELS[config.model]
     else:
-        hf_tokenizer_name_or_path = args.model
+        hf_tokenizer_name_or_path = config.model
 
-    data_module = TASKS[args.task_type][0](
+    data_module = TASKS[config.task_type][0](
         data_splits=data_splits,
         tokenizer_name_or_path=hf_tokenizer_name_or_path,
         tokenizer_config=dict(
-            cache_dir=args.cache_dir,
-            do_lower_case=args.lower_case,
+            cache_dir=config.cache_dir,
+            do_lower_case=config.lower_case,
             use_fast=True
         ),
         datasets_config=dict(
-            max_seq_length=args.max_seq_length
+            max_seq_length=config.max_seq_length
         ),
-        train_batch_size=args.train_batch_size,
-        eval_batch_size=args.eval_batch_size,
-        evaluation_split=args.evaluation_split,
-        num_workers=args.num_workers
+        train_batch_size=config.train_batch_size,
+        eval_batch_size=config.eval_batch_size,
+        evaluation_split=config.evaluation_split,
+        num_workers=config.num_workers
     )
     data_module.prepare_data()
     data_module.setup('fit')
 
     # Setting up the Hugging Face model or path
-    if args.model in MODELS:
-        hf_model_name_or_path = MODELS[args.model]
+    if config.model in MODELS:
+        hf_model_name_or_path = MODELS[config.model]
     else:
-        hf_model_name_or_path = args.model
+        hf_model_name_or_path = config.model
 
-    if args.load_from_checkpoint is not None:
-        if not Path(args.load_from_checkpoint).is_file():
-            logger.error(f"The checkpoint file doesn't exists: {args.load_from_checkpoint}")
+    if config.load_from_checkpoint is not None:
+        if not Path(config.load_from_checkpoint).is_file():
+            logger.error(f"The checkpoint file doesn't exists: {config.load_from_checkpoint}")
             sys.exit(1)
-        model = TASKS[args.task_type][1].load_from_checkpoint(args.load_from_checkpoint)
+        model = TASKS[config.task_type][1].load_from_checkpoint(config.load_from_checkpoint)
     else:
-        model = TASKS[args.task_type][1](
+        model = TASKS[config.task_type][1](
             model_name_or_path=hf_model_name_or_path,
             id2label=data_module.id2label,
             label2id=data_module.label2id,
-            config_name_or_path=args.config,
-            cache_dir=args.cache_dir,
+            config_name_or_path=config.config,
+            cache_dir=config.cache_dir,
             masked_label=data_module.label2id.get('PAD', -100),
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay,
-            adam_epsilon=args.adam_epsilon,
-            warmup_steps=args.warmup_steps
+            learning_rate=config.learning_rate,
+            weight_decay=config.weight_decay,
+            adam_epsilon=config.adam_epsilon,
+            warmup_steps=config.warmup_steps
         )
 
-    if args.train:
-        trainer, model_checkpoints = train_model(data_module, model, args)
+    if config.train:
+        trainer, model_checkpoints = train_model(data_module, model, config)
 
-    if args.evaluation_split:
-        evaluate_models(data_module, model, args, trainer if args.train else None,
-                        model_checkpoints if args.train else None)
+    if config.evaluation_split:
+        evaluate_models(data_module, model, config, trainer if config.train else None,
+                        model_checkpoints if config.train else None)

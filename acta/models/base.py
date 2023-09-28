@@ -95,15 +95,15 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         raise NotImplementedError()
 
     def _accumulate_test_results(self):
-        test_loss = []
+        eval_loss = []
         true_labels = []
         pred_labels = []
         for test_output in self.test_output_cache:
-            test_loss.append(test_output['test_loss'])
+            eval_loss.append(test_output['eval_loss'])
             true_labels.extend(test_output['true_labels'])
             pred_labels.extend(test_output['pred_labels'])
         self.test_output_cache = []
-        return test_loss, true_labels, pred_labels
+        return eval_loss, true_labels, pred_labels
 
     def training_step(self, batch, batch_idx):
         return self._loss(batch)

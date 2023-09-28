@@ -87,7 +87,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         path, emissions = self(**batch)
         mask = (labels != self.hparams.masked_label)
 
-        test_loss = -self.crf(emissions, labels, mask=mask)
+        eval_loss = -self.crf(emissions, labels, mask=mask)
 
         # Remove the masked labels
         non_mask_labels = torch.masked_select(labels, mask).tolist()
@@ -95,13 +95,13 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         assert len(non_mask_labels) == len(non_masked_predictions)
 
         self.test_output_cache.append({
-            "test_loss": test_loss.item(),
+            "eval_loss": eval_loss.item(),
             "true_labels": non_mask_labels,
             "pred_labels": non_masked_predictions,
         })
 
     def on_test_epoch_end(self):
-        test_loss, true_labels, pred_labels = self._accumulate_test_results()
+        eval_loss, true_labels, pred_labels = self._accumulate_test_results()
 
         # F1 macro and micro averages for classes different from the most common
         # one (this assumes the most common class is "0") and different from
@@ -109,7 +109,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         outputs = compute_metrics(true_labels, pred_labels,
                                   [label for label in self.config.id2label
                                    if label != 0 and label != self.hparams.masked_label])
-        outputs["test_loss"] = np.mean(test_loss)
+        outputs["eval_loss"] = np.mean(eval_loss)
         self.log_dict(outputs)
         return outputs
 

@@ -208,7 +208,7 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
                   file=fh)
         with open(output_dir / 'results' / f'{model_name}_predictions.conll', 'w') as fh:
             print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
-                               for sentence in decoded_predictions]))
+                               for sentence in decoded_predictions]), file=fh)
 
 
 def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModule,

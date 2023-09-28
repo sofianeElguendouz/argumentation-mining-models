@@ -76,7 +76,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         labels = batch.pop('labels')
         path, emissions = self(**batch)
-        mask = (labels != self.hparams.masked_label).to(torch.uint8)
+        mask = (labels != self.hparams.masked_label)
 
         return -self.crf(emissions, labels, mask=mask)
 

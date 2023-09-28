@@ -20,13 +20,15 @@ import argparse
 import logging
 import lightning.pytorch as pl
 import os
+import re
 import sys
 
+from datetime import datetime
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from pathlib import Path, PosixPath
 from sklearn import metrics as skmetrics
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
@@ -52,7 +54,7 @@ DATA_SPLITS = ['train', 'test', 'validation', 'dev']
 logger = logging.getLogger(__name__)
 
 
-def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
+def get_data_splits(input_dir: PosixPath, task_type: str) -> Dict[str, PosixPath]:
     """
     Function that search for possible split files given an input directory.
 
@@ -66,7 +68,7 @@ def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
 
     Parameters
     ----------
-    input_dir: str
+    input_dir: PosixPath
         Path to the input dir with the split files.
     task_type: str
         Used to determine the file extension.
@@ -78,7 +80,6 @@ def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
         split.
     """
     assert task_type in TASKS, f"Invalid task, use on of: {', '.join(TASKS.keys())}."
-    input_dir = Path(input_dir)
     file_type = TASKS[task_type][2]
     splits_files = {}
     for split in DATA_SPLITS:
@@ -105,19 +106,19 @@ def get_data_splits(input_dir: str, task_type: str) -> Dict[str, PosixPath]:
 
 
 def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                args: argparse.Namespace) -> pl.Trainer:
+                args: argparse.Namespace) -> Tuple[pl.Trainer, ModelCheckpoint]:
     """
     Trains a model and returns the checkpoints for that model.
     """
-    output_dir = Path(args.output_dir)
     model_name = args.model if args.model in MODELS else os.path.basename(args.model)
+    model_name = f"{model_name}_{args.task_type}"
     callbacks = []
 
-    model_logger = TensorBoardLogger(save_dir=output_dir / args.logging_dir)
+    model_logger = TensorBoardLogger(save_dir=args.output_dir / args.logging_dir)
 
     model_checkpoints = ModelCheckpoint(
-        dirpath=output_dir / args.checkpoint_path,
-        filename=model_name + "-{epoch:02d}-{step:05d}",
+        dirpath=args.output_dir / args.checkpoint_path,
+        filename=model_name + "_{epoch:02d}_{step:05d}",
         save_top_k=-1,  # Save all models
         every_n_train_steps=args.save_every_n_steps
     )
@@ -154,29 +155,50 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     )
 
     logger.info("Starting model training routine")
-    trainer.fit(model, datamodule=data_module)
+    trainer.fit(model, datamodule=data_module, ckpt_path=args.load_from_checkpoint)
     logger.info("Finished model training routine")
 
     logger.info("Saving last model checkpoint")
-    trainer.save_checkpoint(output_dir / args.checkpoint_path / f"{model_name}-final.ckpt")
+    last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
+        {"epoch": trainer.current_epoch, "step": trainer.global_step}
+    ))
+    if not last_model_checkpoint.is_file():
+        # Save a checkpoint for the last epoch and last step
+        trainer.save_checkpoint(last_model_checkpoint)
+    # Create a link to the last model checkpoint (overwrite if necessary)
+    last_model_checkpoint_symlink = Path(f"{model_checkpoints.dirpath}/{model_name}_final.ckpt")
+    if last_model_checkpoint_symlink.exists():
+        logger.warning(f"Overriding link to last checkpoint to {last_model_checkpoint}")
+        os.unlink(last_model_checkpoint_symlink)
+    os.symlink(last_model_checkpoint, last_model_checkpoint_symlink)
 
-    return trainer
+    return trainer, model_checkpoints
 
 
-def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
+def evaluate_model(data_module: pl.LightningDataModule,
+                   model_or_checkpoint: Union[pl.LightningModule, PosixPath],
                    args: argparse.Namespace, trainer: pl.Trainer, model_name: str):
     """
     Evaluates a single model and write its outputs.
     """
-    trainer.test(model, datamodule=data_module)
-
-    decoded_predictions = [
-        decoded_prediction
-        for batch_prediction in trainer.predict(model, datamodule=data_module)
-        for decoded_prediction in data_module.decode_predictions(**batch_prediction)
-    ]
-    output_dir = Path(args.output_dir)
-    os.makedirs(output_dir / 'results', exist_ok=True)
+    logger.info(f"Evaluating {model_name}")
+    results_dir = args.output_dir / 'results' / args.timestamp
+    if isinstance(model_or_checkpoint, pl.LightningModule):
+        trainer.test(model=model_or_checkpoint, datamodule=data_module)
+        decoded_predictions = [
+            decoded_prediction
+            for batch_prediction in trainer.predict(model=model_or_checkpoint,
+                                                    datamodule=data_module)
+            for decoded_prediction in data_module.decode_predictions(**batch_prediction)
+        ]
+    else:
+        trainer.test(ckpt_path=model_or_checkpoint, datamodule=data_module)
+        decoded_predictions = [
+            decoded_prediction
+            for batch_prediction in trainer.predict(ckpt_path=model_or_checkpoint,
+                                                    datamodule=data_module)
+            for decoded_prediction in data_module.decode_predictions(**batch_prediction)
+        ]
 
     if args.task_type == 'rel-class':
         # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
@@ -185,12 +207,12 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         for prediction in decoded_predictions:
             true_labels.append(prediction[0])
             pred_labels.append(prediction[1])
-        with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
+        with open(results_dir / f'{model_name}_report.txt', 'w') as fh:
             print(skmetrics.classification_report(true_labels, pred_labels,
                                                   labels=list(data_module.label2id.keys()),
                                                   zero_division=0),
                   file=fh)
-        with open(output_dir / 'results' / f'{model_name}_predictions.tsv', 'w') as fh:
+        with open(results_dir / f'{model_name}_predictions.tsv', 'w') as fh:
             print('true\tpredicted\tsentence1\tsentence2', file=fh)
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
     elif args.task_type == 'seq-tag':
@@ -201,27 +223,36 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         for sentence in decoded_predictions:
             true_labels.extend([token[2] for token in sentence])
             pred_labels.extend([token[1] for token in sentence])
-        with open(output_dir / 'results' / f'{model_name}_results.txt', 'w') as fh:
+        with open(results_dir / f'{model_name}_report.txt', 'w') as fh:
             print(skmetrics.classification_report(true_labels, pred_labels,
                                                   labels=list(data_module.label2id.keys()),
                                                   zero_division=0),
                   file=fh)
-        with open(output_dir / 'results' / f'{model_name}_predictions.conll', 'w') as fh:
+        with open(results_dir / f'{model_name}_predictions.conll', 'w') as fh:
             print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
                                for sentence in decoded_predictions]), file=fh)
 
 
 def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                    args: argparse.Namespace, trainer: Optional[pl.Trainer] = None):
+                    args: argparse.Namespace, trainer: Optional[pl.Trainer] = None,
+                    model_checkpoints: Optional[ModelCheckpoint] = None):
     """
     Evaluates the model on the evaluation dataset. Depending on the options, it
     will evaluate only in the final model or in all the models in the
     checkpoints.
     """
-    output_dir = Path(args.output_dir)
-    if trainer is None:
+    # Create the results directory (should be unique)
+    os.makedirs(args.output_dir / 'results' / args.timestamp)
+    model_name = args.model if args.model in MODELS else os.path.basename(args.model)
+    model_name = f"{model_name}_{args.task_type}"
+
+    if not args.train:
         # Build a trainer for prediction purposes
-        model_logger = TensorBoardLogger(save_dir=output_dir / args.logging_dir)
+        model_logger = TensorBoardLogger(save_dir=args.output_dir / args.logging_dir)
+        model_checkpoints = ModelCheckpoint(
+            dirpath=args.output_dir / args.checkpoint_path,
+            filename=model_name + "_{epoch:02d}_{step:05d}"
+        )
         trainer = pl.Trainer(
             accelerator=args.accelerator,
             devices=args.num_devices,
@@ -237,16 +268,80 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
         )
 
     if args.eval_all_checkpoints:
-        for checkpoint_file in (output_dir / args.checkpoint_path).glob('*.ckpt'):
-            if checkpoint_file.name.endswith('-final.ckpt'):
-                # Ignore this model for now, it will run late
-                continue
-            evaluate_model(data_module,
-                           TASKS[args.task_type][1].load_from_checkpoint(checkpoint_file),
-                           args, trainer, checkpoint_file.name.split('.ckpt')[0])
+        if args.train:
+            # Training mode, try to fetch the last checkpoint from the symlink and check it
+            # corresponds to the actual last training checkpoint from trainer
+            last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
+                {"epoch": trainer.current_epoch, "step": trainer.global_step}
+            ))
+            last_model_checkpoint_symlink = Path(
+                f"{model_checkpoints.dirpath}/{model_name}_final.ckpt"
+            )
+            if not last_model_checkpoint_symlink.exists() or\
+                    Path(os.readlink(last_model_checkpoint_symlink)) != last_model_checkpoint:
+                logger.warning(f"The last model checkpoint `{last_model_checkpoint}` doesn't "
+                               "correspond to the final checkpoint link "
+                               f"`{last_model_checkpoint_symlink}`. The evaluation will be done "
+                               f"with `{last_model_checkpoint}` as final checkpoint.")
+        elif args.load_from_checkpoint is not None:
+            # If there was no training, assumes the last checkpoint was loaded by
+            # the `--load-from-checkpoint` option
+            last_model_checkpoint = Path(args.load_from_checkpoint)
+        else:
+            # There's no information on what the last checkpoint is, it will run
+            # all possible checkpoints with a warning
+            logger.warning("There is no information on what the last checkpoint was. "
+                           "This will evaluate on all the found checkpoints, "
+                           "with unexpected results (checkpoint may come from different runs).")
+            last_model_checkpoint = None
 
-    model_name = args.model if args.model in MODELS else os.path.basename(args.model)
-    evaluate_model(data_module, model, args, trainer, model_name)
+        if last_model_checkpoint:
+            checkpoint_step = re.search(r"(?<=step=)\d+", last_model_checkpoint.name)
+            if checkpoint_step:
+                last_checkpoint_step = int(checkpoint_step.group(0))
+            else:
+                last_checkpoint_step = 0
+        else:
+            last_checkpoint_step = 0
+
+        if last_checkpoint_step == 0:
+            logger.warning("It wasn't possible to determine last checkpoint step."
+                           "This will evaluate on all the found checkpoints, "
+                           "with unexpected results (checkpoint may come from different runs).")
+
+        multiversions_warning = True
+        for checkpoint_file in sorted(Path(model_checkpoints.dirpath).glob(f'{model_name}_*.ckpt')):
+            if checkpoint_file.name.endswith('_final.ckpt') or\
+                    checkpoint_file.name == last_model_checkpoint.name:
+                # Ignore the last checkpoint, it will be run at the end
+                continue
+            if re.search(r"-v\d+.ckpt$", checkpoint_file.name) and multiversions_warning:
+                logger.warning("Multiple versions of the same checkpoint were found "
+                               "this could give unexpected results (checkpoints come "
+                               "from different runs).")
+                multiversions_warning = False
+            checkpoint_step = re.search(r"(?<=step=)\d+", checkpoint_file.name)
+            checkpoint_step = int(checkpoint_step.group(0)) if checkpoint_step else None
+            if last_checkpoint_step > 0 and checkpoint_step is None:
+                # Do not run unkown checkpoints when last_checkpoint_step is known
+                logger.warning(f"Ignoring {checkpoint_file} since it doesn't have a declared step.")
+                continue
+            elif (checkpoint_step is not None and checkpoint_step < last_checkpoint_step) \
+                    or last_checkpoint_step == 0:
+                # Run checkpoint steps previous to last_checkpoint_step
+                # Or run every checkpoint file following the previous warning
+                # (last_checkpoint_step == 0)
+                if args.train:
+                    evaluate_model(data_module, checkpoint_file, args, trainer,
+                                   checkpoint_file.name.split('.ckpt')[0])
+                else:
+                    # If there was no training, the trainer requires the loaded model
+                    evaluate_model(data_module,
+                                   TASKS[args.task_type][1].load_from_checkpoint(checkpoint_file),
+                                   args, trainer, checkpoint_file.name.split('.ckpt')[0])
+
+    # Evaluates the final model
+    evaluate_model(data_module, model, args, trainer, f"{model_name}_final")
 
 
 if __name__ == "__main__":
@@ -255,10 +350,12 @@ if __name__ == "__main__":
     # Required parameters
     parser.add_argument("--input-dir",
                         required=True,
+                        type=Path,
                         help="The input directory. It has the train, test and validation (dev) "
                              "files. Depending on the task they might be tsv or conll.")
     parser.add_argument("--output-dir",
                         required=True,
+                        type=Path,
                         help="The output directory where the model predictions and checkpoints "
                              "will be stored.")
     parser.add_argument("--task-type",
@@ -408,11 +505,13 @@ if __name__ == "__main__":
 
     # Checking pre-conditions
     if not args.train and not args.evaluation_split:
-        logger.error("The script must be for training or at least have 1 evaluation split.")
+        logger.error("The script must be run for training or at least have 1 evaluation split.")
         sys.exit(1)
 
-    output_dir = Path(args.output_dir)
-    if output_dir.exists() and list(output_dir.glob('*')) and args.train\
+    if not args.train and args.load_from_checkpoint is None:
+        logger.warning("Evaluation to be run on model without finetuning.")
+
+    if args.output_dir.exists() and list(args.output_dir.glob('*')) and args.train\
             and not args.overwrite_output:
         logger.error(f"Output directory ({args.output_dir}) already exists and is not empty. "
                      "Use --overwrite-output to ovewrite the directory (information will be lost).")
@@ -467,21 +566,24 @@ if __name__ == "__main__":
     )
 
     # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    # Timestamp to keep track of results
+    args.timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
     # Set random seed
     pl.seed_everything(args.random_seed)
 
     if args.tokenizer:
-        tokenizer_name_or_path = args.tokenizer
+        hf_tokenizer_name_or_path = args.tokenizer
     elif args.model in MODELS:
-        tokenizer_name_or_path = MODELS[args.model]
+        hf_tokenizer_name_or_path = MODELS[args.model]
     else:
-        tokenizer_name_or_path = args.model
+        hf_tokenizer_name_or_path = args.model
 
     data_module = TASKS[args.task_type][0](
         data_splits=data_splits,
-        tokenizer_name_or_path=tokenizer_name_or_path,
+        tokenizer_name_or_path=hf_tokenizer_name_or_path,
         tokenizer_config=dict(
             cache_dir=args.cache_dir,
             do_lower_case=args.lower_case,
@@ -498,16 +600,20 @@ if __name__ == "__main__":
     data_module.prepare_data()
     data_module.setup('fit')
 
+    # Setting up the Hugging Face model or path
     if args.model in MODELS:
-        model_name_or_path = MODELS[args.model]
+        hf_model_name_or_path = MODELS[args.model]
     else:
-        model_name_or_path = args.model
+        hf_model_name_or_path = args.model
 
-    if args.load_from_checkpoint is not None and Path(args.load_from_checkpoint).is_file():
+    if args.load_from_checkpoint is not None:
+        if not Path(args.load_from_checkpoint).is_file():
+            logger.error(f"The checkpoint file doesn't exists: {args.load_from_checkpoint}")
+            sys.exit(1)
         model = TASKS[args.task_type][1].load_from_checkpoint(args.load_from_checkpoint)
     else:
         model = TASKS[args.task_type][1](
-            model_name_or_path=model_name_or_path,
+            model_name_or_path=hf_model_name_or_path,
             id2label=data_module.id2label,
             label2id=data_module.label2id,
             config_name_or_path=args.config,
@@ -520,7 +626,8 @@ if __name__ == "__main__":
         )
 
     if args.train:
-        trainer = train_model(data_module, model, args)
+        trainer, model_checkpoints = train_model(data_module, model, args)
 
     if args.evaluation_split:
-        evaluate_models(data_module, model, args, trainer if args.train else None)
+        evaluate_models(data_module, model, args, trainer if args.train else None,
+                        model_checkpoints if args.train else None)

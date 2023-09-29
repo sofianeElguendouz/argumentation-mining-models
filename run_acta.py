@@ -466,10 +466,6 @@ if __name__ == "__main__":
                         default=1.0,
                         type=float,
                         help="Max gradient norm (for gradient clipping). Set to 0 to deactivate.")
-    parser.add_argument("--learning-rate",
-                        default=5e-5,
-                        type=float,
-                        help="The initial learning rate for AdamW.")
     parser.add_argument("--max-seq-length",
                         type=int,
                         help="The maximum total input sequence length after tokenization."
@@ -480,6 +476,10 @@ if __name__ == "__main__":
     parser.add_argument("--lower-case",
                         action="store_true",
                         help="Should be active for lowercase transformers.")
+    parser.add_argument("--learning-rate",
+                        default=5e-5,
+                        type=float,
+                        help="The initial learning rate for AdamW.")
     parser.add_argument("--weight-decay",
                         default=0.0,
                         type=float,
@@ -513,10 +513,10 @@ if __name__ == "__main__":
     parser.add_argument("--fp16",
                         action="store_true",
                         help="Whether to use 16-bit (mixed) precision")
-    parser.add_argument("--server_ip",
+    parser.add_argument("--server-ip",
                         default="",
                         help="For distant debugging.")
-    parser.add_argument("--server_port",
+    parser.add_argument("--server-port",
                         default="",
                         help="For distant debugging.")
     parser.add_argument("--debug",

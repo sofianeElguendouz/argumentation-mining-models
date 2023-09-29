@@ -16,14 +16,12 @@ Pytorch Lightning Module for Relation Classfication.
    limitations under the License.
 """
 
-import numpy as np
 import torch
 
 from transformers import AutoModelForSequenceClassification
 from typing import Any, Dict, Optional
 
 from .base import BaseTransformerModule
-from ..utils import compute_metrics
 
 
 class RelationClassificationTransformerModule(BaseTransformerModule):
@@ -60,25 +58,6 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
 
     def _loss(self, batch: Any) -> torch.Tensor:
         return self(**batch).loss
-
-    def test_step(self, batch, batch_idx):
-        outputs = self(**batch)
-        self.test_output_cache.append({
-            "eval_loss": outputs.loss.item(),
-            "true_labels": batch["labels"].tolist(),
-            "pred_labels": outputs.logits.argmax(1).tolist(),
-        })
-
-    def on_test_epoch_end(self):
-        eval_loss, true_labels, pred_labels = self._accumulate_test_results()
-
-        # F1 macro and micro averages for classes different from the most common
-        # one assuming the most common class is "0"
-        outputs = compute_metrics(true_labels, pred_labels,
-                                  [label for label in self.config.id2label if label != 0])
-        outputs["eval_loss"] = np.mean(eval_loss)
-        self.log_dict(outputs)
-        return outputs
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         labels = batch.pop('labels', None)

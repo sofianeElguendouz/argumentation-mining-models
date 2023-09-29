@@ -25,7 +25,8 @@ from typing import Dict, List, Optional, Union
 
 def compute_metrics(true_labels: List[Union[int, str]],
                     pred_labels: List[Union[int, str]],
-                    limited_labels: Optional[List[Union[int, str]]] = None) -> Dict[str, float]:
+                    limited_labels: Optional[List[Union[int, str]]] = None,
+                    prefix: Optional[str] = None) -> Dict[str, float]:
     """
     Helper function to compute F1-score and Accuracy metrics
     """
@@ -43,6 +44,10 @@ def compute_metrics(true_labels: List[Union[int, str]],
         outputs["f1_score_micro_limited"] = f1_score(
             true_labels, pred_labels, average="micro", zero_division=0, labels=limited_labels
         )
+
+    if prefix:
+        outputs = {f"{prefix}_{metric}": value for metric, value in outputs.items()}
+
     return outputs
 
 

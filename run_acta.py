@@ -17,6 +17,7 @@ Trainer script for the ACTA modules.
 """
 
 import argparse
+import csv
 import logging
 import lightning.pytorch as pl
 import os
@@ -27,12 +28,12 @@ from datetime import datetime
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from pathlib import Path, PosixPath
-from sklearn import metrics as skmetrics
+from sklearn.metrics import classification_report
 from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import TTYAwareProgressBar
+from acta.utils import compute_metrics, TTYAwareProgressBar
 
 
 MODELS = {
@@ -116,7 +117,8 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
 
     model_logger = TensorBoardLogger(
         save_dir=config.output_dir / config.logging_dir,
-        name=config.timestamp
+        name=model_name,
+        version=config.timestamp
     )
 
     model_checkpoints = ModelCheckpoint(
@@ -187,7 +189,6 @@ def evaluate_model(data_module: pl.LightningDataModule,
     logger.info(f"Evaluating {model_name}")
     results_dir = config.output_dir / 'results' / config.timestamp
     if isinstance(model_or_checkpoint, pl.LightningModule):
-        trainer.test(model=model_or_checkpoint, datamodule=data_module)
         decoded_predictions = [
             decoded_prediction
             for batch_prediction in trainer.predict(model=model_or_checkpoint,
@@ -195,7 +196,6 @@ def evaluate_model(data_module: pl.LightningDataModule,
             for decoded_prediction in data_module.decode_predictions(**batch_prediction)
         ]
     else:
-        trainer.test(ckpt_path=model_or_checkpoint, datamodule=data_module)
         decoded_predictions = [
             decoded_prediction
             for batch_prediction in trainer.predict(ckpt_path=model_or_checkpoint,
@@ -210,14 +210,14 @@ def evaluate_model(data_module: pl.LightningDataModule,
         for prediction in decoded_predictions:
             true_labels.append(prediction[0])
             pred_labels.append(prediction[1])
-        with open(results_dir / f'{model_name}_report.txt', 'w') as fh:
-            print(skmetrics.classification_report(true_labels, pred_labels,
-                                                  labels=list(data_module.label2id.keys()),
-                                                  zero_division=0),
-                  file=fh)
         with open(results_dir / f'{model_name}_predictions.tsv', 'w') as fh:
             print('true\tpredicted\tsentence1\tsentence2', file=fh)
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
+        metrics = compute_metrics(
+            true_labels, pred_labels,
+            limited_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
+            prefix="eval"
+        )
     elif config.task_type == 'seq-tag':
         # Predictions are a list of lists of tuples, where each tuple has the form
         # (token, predicted_label, true_label)
@@ -226,14 +226,30 @@ def evaluate_model(data_module: pl.LightningDataModule,
         for sentence in decoded_predictions:
             true_labels.extend([token[2] for token in sentence])
             pred_labels.extend([token[1] for token in sentence])
-        with open(results_dir / f'{model_name}_report.txt', 'w') as fh:
-            print(skmetrics.classification_report(true_labels, pred_labels,
-                                                  labels=list(data_module.label2id.keys()),
-                                                  zero_division=0),
-                  file=fh)
         with open(results_dir / f'{model_name}_predictions.conll', 'w') as fh:
             print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
                                for sentence in decoded_predictions]), file=fh)
+        metrics = compute_metrics(
+            true_labels, pred_labels,
+            limited_labels=[lbl for lbl in data_module.label2id.keys()
+                            if lbl not in {'O', 'X', 'PAD'}],
+            prefix="eval"
+        )
+
+    for metric, value in metrics.items():
+        with open(results_dir / f'{metric}.csv', 'at') as fh:
+            csv_writer = csv.writer(fh)
+            csv_writer.writerow([model_name, value])
+
+    with open(results_dir / f'{model_name}_report.txt', 'wt') as fh:
+        print(
+            classification_report(
+                true_labels, pred_labels, labels=list(data_module.label2id.keys()), zero_division=0
+            ),
+            file=fh
+        )
+
+    return metrics
 
 
 def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModule,
@@ -253,7 +269,8 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
         # Build a trainer for prediction purposes
         model_logger = TensorBoardLogger(
             save_dir=config.output_dir / config.logging_dir,
-            name=config.timestamp
+            name=model_name,
+            version=config.timestamp
         )
         model_checkpoints = ModelCheckpoint(
             dirpath=config.output_dir / config.checkpoint_path,
@@ -294,26 +311,25 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
             # the `--load-from-checkpoint` option
             last_model_checkpoint = Path(config.load_from_checkpoint)
         else:
-            # There's no information on what the last checkpoint is, it will run
-            # all possible checkpoints with a warning
+            # There isn't any information on what the last checkpoint is, it will run
+            # all found checkpoints files with a warning
             logger.warning("There is no information on what the last checkpoint was. "
-                           "This will evaluate on all the found checkpoints, "
+                           "This will evaluate on all the found checkpoints files, "
                            "with unexpected results (checkpoint may come from different runs).")
             last_model_checkpoint = None
 
-        if last_model_checkpoint:
+        if last_model_checkpoint is not None:
             checkpoint_step = re.search(r"(?<=step=)\d+", last_model_checkpoint.name)
             if checkpoint_step:
+                # Get the global step of the checkpoint
                 last_checkpoint_step = int(checkpoint_step.group(0))
             else:
                 last_checkpoint_step = 0
+                logger.warning("It wasn't possible to determine last checkpoint step. "
+                               "This will evaluate on all the found checkpoints files, "
+                               "with unexpected results (checkpoint may come from different runs).")
         else:
             last_checkpoint_step = 0
-
-        if last_checkpoint_step == 0:
-            logger.warning("It wasn't possible to determine last checkpoint step."
-                           "This will evaluate on all the found checkpoints, "
-                           "with unexpected results (checkpoint may come from different runs).")
 
         multiversions_warning = True
         for checkpoint_file in sorted(Path(model_checkpoints.dirpath).glob(f'{model_name}_*.ckpt')):
@@ -322,7 +338,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                 # Ignore the last checkpoint, it will be run at the end
                 continue
             if re.search(r"-v\d+.ckpt$", checkpoint_file.name) and multiversions_warning:
-                logger.warning("Multiple versions of the same checkpoint were found "
+                logger.warning("Multiple versions of checkpoint files were found "
                                "this could give unexpected results (checkpoints come "
                                "from different runs).")
                 multiversions_warning = False
@@ -336,18 +352,23 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                     or last_checkpoint_step == 0:
                 # Run checkpoint steps previous to last_checkpoint_step
                 # Or run every checkpoint file following the previous warning
-                # (last_checkpoint_step == 0)
-                if config.train:
-                    evaluate_model(data_module, checkpoint_file, config, trainer,
-                                   checkpoint_file.name.split('.ckpt')[0])
-                else:
-                    # If there was no training, the trainer requires the loaded model
-                    evaluate_model(data_module,
-                                   TASKS[config.task_type][1].load_from_checkpoint(checkpoint_file),
-                                   config, trainer, checkpoint_file.name.split('.ckpt')[0])
-
-    # Evaluates the final model
-    evaluate_model(data_module, model, config, trainer, f"{model_name}_final")
+                # (i.e. last_checkpoint_step == 0)
+                if not config.train:
+                    # Need to load the checkpoint_file
+                    checkpoint_file = TASKS[config.task_type][1].load_from_checkpoint(
+                        checkpoint_file
+                    )
+                metrics = evaluate_model(data_module, checkpoint_file, config, trainer,
+                                         checkpoint_file.name.split('.ckpt')[0])
+                trainer.logger.log_metrics(metrics, step=checkpoint_step)
+        if last_checkpoint_step is not None:
+            # Evaluates the final checkpoint (if exists)
+            metrics = evaluate_model(data_module, last_model_checkpoint, config, trainer,
+                                     f"{model_name}_final")
+            trainer.logger.log_metrics(metrics, step=trainer.global_step)
+    else:
+        metrics = evaluate_model(data_module, model, config, trainer, f"{model_name}_final")
+        trainer.logger.log_metrics(metrics, step=trainer.global_step)
 
 
 if __name__ == "__main__":

@@ -290,51 +290,63 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
             num_sanity_val_steps=0 if not config.validation else 1 if config.debug else 2
         )
 
-    if config.eval_all_checkpoints:
-        if config.train:
-            # Training mode, try to fetch the last checkpoint from the symlink and check it
-            # corresponds to the actual last training checkpoint from trainer
-            last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
-                {"epoch": trainer.current_epoch, "step": trainer.global_step}
-            ))
-            last_model_checkpoint_symlink = Path(
-                f"{model_checkpoints.dirpath}/{model_name}_final.ckpt"
-            )
-            if not last_model_checkpoint_symlink.exists() or\
-                    Path(os.readlink(last_model_checkpoint_symlink)) != last_model_checkpoint:
-                logger.warning(f"The last model checkpoint `{last_model_checkpoint}` doesn't "
-                               "correspond to the final checkpoint link "
-                               f"`{last_model_checkpoint_symlink}`. The evaluation will be done "
-                               f"with `{last_model_checkpoint}` as final checkpoint.")
-        elif config.load_from_checkpoint is not None:
-            # If there was no training, assumes the last checkpoint was loaded by
-            # the `--load-from-checkpoint` option
-            last_model_checkpoint = Path(config.load_from_checkpoint)
-        else:
-            # There isn't any information on what the last checkpoint is, it will run
-            # all found checkpoints files with a warning
-            logger.warning("There is no information on what the last checkpoint was. "
-                           "This will evaluate on all the found checkpoints files, "
-                           "with unexpected results (checkpoint may come from different runs).")
-            last_model_checkpoint = None
+    if config.train:
+        # Training mode, try to fetch the last checkpoint from the symlink and check it
+        # corresponds to the actual last training checkpoint from trainer
+        last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
+            {"epoch": trainer.current_epoch, "step": trainer.global_step}
+        ))
+        last_model_checkpoint_symlink = Path(
+            f"{model_checkpoints.dirpath}/{model_name}_final.ckpt"
+        )
+        if not last_model_checkpoint_symlink.exists() or\
+                last_model_checkpoint_symlink.readlink() != last_model_checkpoint:
+            logger.warning(f"The last model checkpoint `{last_model_checkpoint}` doesn't "
+                           "correspond to the final checkpoint link "
+                           f"`{last_model_checkpoint_symlink}`. The evaluation will be done "
+                           f"with `{last_model_checkpoint}` as final checkpoint.")
+    elif config.load_from_checkpoint is not None:
+        # If there was no training, assumes the last checkpoint was loaded by
+        # the `--load-from-checkpoint` option
+        last_model_checkpoint = Path(config.load_from_checkpoint)
+        if last_model_checkpoint.is_symlink():
+            # If it is a symlink, get the real path to the checkpoint
+            last_model_checkpoint = last_model_checkpoint.readlink()
+    else:
+        # There isn't any information on what the last checkpoint is, it will run
+        # all found checkpoints files with a warning
+        logger.warning("There is no information on what the last checkpoint was. "
+                       "This will evaluate on all the found checkpoints files, "
+                       "with unexpected results (checkpoint may come from different runs).")
+        last_model_checkpoint = None
 
-        if last_model_checkpoint is not None:
-            checkpoint_step = re.search(r"(?<=step=)\d+", last_model_checkpoint.name)
-            if checkpoint_step:
-                # Get the global step of the checkpoint
-                last_checkpoint_step = int(checkpoint_step.group(0))
-            else:
-                last_checkpoint_step = 0
-                logger.warning("It wasn't possible to determine last checkpoint step. "
-                               "This will evaluate on all the found checkpoints files, "
-                               "with unexpected results (checkpoint may come from different runs).")
+    if last_model_checkpoint is not None:
+        checkpoint_step = re.search(r"(?<=step=)\d+", last_model_checkpoint.name)
+        if checkpoint_step:
+            # Get the global step of the checkpoint
+            last_checkpoint_step = int(checkpoint_step.group(0))
+            # If the step is valid, the epoch must exists
+            try:
+                checkpoint_epoch = re.search(r"(?<=epoch=)\d+", last_model_checkpoint.name)
+                last_checkpoint_epoch = int(checkpoint_epoch.group(0))
+            except ValueError:
+                logger.error(f"There was an error getting the epoch in {last_model_checkpoint}")
+                sys.exit(1)
         else:
             last_checkpoint_step = 0
+            logger.warning("It wasn't possible to determine last checkpoint step. "
+                           "This will evaluate on all the found checkpoints files, "
+                           "with unexpected results (checkpoint may come from different runs).")
+    else:
+        last_checkpoint_step = 0
+        last_checkpoint_epoch = 0
 
+    if config.eval_all_checkpoints:
         multiversions_warning = True
         for checkpoint_file in sorted(Path(model_checkpoints.dirpath).glob(f'{model_name}_*.ckpt')):
             if checkpoint_file.name.endswith('_final.ckpt') or\
-                    checkpoint_file.name == last_model_checkpoint.name:
+                    (last_model_checkpoint is not None and
+                        checkpoint_file.name == last_model_checkpoint.name):
                 # Ignore the last checkpoint, it will be run at the end
                 continue
             if re.search(r"-v\d+.ckpt$", checkpoint_file.name) and multiversions_warning:
@@ -353,22 +365,28 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                 # Run checkpoint steps previous to last_checkpoint_step
                 # Or run every checkpoint file following the previous warning
                 # (i.e. last_checkpoint_step == 0)
+                checkpoint_name = checkpoint_file.name.split('.ckpt')[0]
                 if not config.train:
                     # Need to load the checkpoint_file
                     checkpoint_file = TASKS[config.task_type][1].load_from_checkpoint(
                         checkpoint_file
                     )
                 metrics = evaluate_model(data_module, checkpoint_file, config, trainer,
-                                         checkpoint_file.name.split('.ckpt')[0])
+                                         checkpoint_name)
                 trainer.logger.log_metrics(metrics, step=checkpoint_step)
-        if last_checkpoint_step is not None:
+
+        if last_model_checkpoint is not None:
             # Evaluates the final checkpoint (if exists)
+            final_model_name = f"{model_name}_epoch={last_checkpoint_epoch:02d}_"
+            final_model_name += f"step={last_checkpoint_step:05d}"
             metrics = evaluate_model(data_module, last_model_checkpoint, config, trainer,
-                                     f"{model_name}_final")
-            trainer.logger.log_metrics(metrics, step=trainer.global_step)
+                                     final_model_name)
+            trainer.logger.log_metrics(metrics, step=last_checkpoint_step)
     else:
-        metrics = evaluate_model(data_module, model, config, trainer, f"{model_name}_final")
-        trainer.logger.log_metrics(metrics, step=trainer.global_step)
+        final_model_name = f"{model_name}_epoch={last_checkpoint_epoch:02d}_"
+        final_model_name += f"step={last_checkpoint_step:05d}"
+        metrics = evaluate_model(data_module, model, config, trainer, final_model_name)
+        trainer.logger.log_metrics(metrics, step=last_checkpoint_step)
 
 
 if __name__ == "__main__":

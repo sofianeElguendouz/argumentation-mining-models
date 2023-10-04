@@ -236,8 +236,9 @@ def evaluate_model(data_module: pl.LightningDataModule,
             prefix="eval"
         )
 
+    hf_model, task_name = model_name.split('_', 2)[:2]
     for metric, value in metrics.items():
-        with open(results_dir / f'{metric}.csv', 'at') as fh:
+        with open(results_dir / f'{hf_model}_{task_name}_{metric}.csv', 'at') as fh:
             csv_writer = csv.writer(fh)
             csv_writer.writerow([model_name, value])
 

@@ -1,6 +1,8 @@
 """
 Module that defines the abstract class `BaseDataset` which is the base class for
-`RelationClassificationDataset` and `SequenceTaggingDataset` in the module.
+`RelationClassificationDataset` and `SequenceTaggingDataset` in the module, and
+the abstract class `BaseDataModule` which is the base class for
+`RelationClassificationDataModule` and `SequenceTaggingDataModule`.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -52,6 +54,11 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     truncation_strategy: str
         What truncation strategy to use (by default truncates the longest
         sentence). Must be one of `longest_first`, `only_second`, `only_first`.
+        Check https://huggingface.co/docs/transformers/pad_truncation for more
+        information.
+    **kwargs
+        Extra keyword arguments dependant on the children classes. Used for the
+        `_load_dataset` method among other class specific use cases.
     """
     def __init__(self,
                  tokenizer: AutoTokenizer,
@@ -88,6 +95,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         ----------
         path_to_dataset: str
             Path to the dataset to load (it comes from the class constructor).
+        **kwargs
+            Extra arguments that are class specific for children classes.
         """
 
 
@@ -96,11 +105,15 @@ class BaseDataModule(LightningDataModule):
     BaseDataModule abstract class. Contains some common implementations
     for data module classes.
 
+    Check the documentation for LightningDataModule for more information:
+    https://lightning.ai/docs/pytorch/stable/data/datamodule.html
+
     Parameters
     ----------
     data_splits: Dict[str, PosixPath]
         Mapping between splits and paths to the files corresponding to such
-        splits.
+        splits. It must have at least 1 split otherwise it will raise
+        ValueError.
     tokenizer_name_or_path: str
         Name or path to a Hugging Face Tokenizer to load.
     tokenizer_config: Dict[str, Any]
@@ -126,6 +139,10 @@ class BaseDataModule(LightningDataModule):
                  evaluation_split: Optional[str] = None,
                  num_workers: int = -1):
         super().__init__()
+
+        if len(data_splits) == 0:
+            raise ValueError("The `data_splits` argument must not be empty.")
+
         self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
@@ -229,7 +246,8 @@ class BaseDataModule(LightningDataModule):
         Parameters
         ----------
         stage: str
-            One of `fit`, `test`, `validate` and `predict`
+            One of `fit`, `test`, `validate` and `predict`. Only for
+            compatibility.
         """
         for split, path in self.data_splits.items():
             self.datasets[split] = self._load_dataset_split(path)
@@ -246,16 +264,19 @@ class BaseDataModule(LightningDataModule):
             Path to the dataset to load.
         """
 
-    def train_dataloader(self) -> DataLoader:
+    def train_dataloader(self) -> Optional[DataLoader]:
         """
-        Returns a DataLoader object for the train split of the dataset.
+        Returns the dataloader for train (if it exists) otherwise returns None.
         """
-        return DataLoader(dataset=self.datasets["train"],
-                          batch_size=self.train_batch_size,
-                          shuffle=True,
-                          drop_last=False,
-                          collate_fn=self.collate_fn,
-                          num_workers=self.num_workers)
+        if "train" in self.datasets:
+            return DataLoader(dataset=self.datasets["train"],
+                              batch_size=self.train_batch_size,
+                              shuffle=True,
+                              drop_last=False,
+                              collate_fn=self.collate_fn,
+                              num_workers=self.num_workers)
+        else:
+            None
 
     def val_dataloader(self) -> Optional[DataLoader]:
         """

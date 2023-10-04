@@ -215,7 +215,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
         metrics = compute_metrics(
             true_labels, pred_labels,
-            limited_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
+            relevant_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
             prefix="eval"
         )
     elif config.task_type == 'seq-tag':
@@ -231,8 +231,8 @@ def evaluate_model(data_module: pl.LightningDataModule,
                                for sentence in decoded_predictions]), file=fh)
         metrics = compute_metrics(
             true_labels, pred_labels,
-            limited_labels=[lbl for lbl in data_module.label2id.keys()
-                            if lbl not in {'O', 'X', 'PAD'}],
+            relevant_labels=[lbl for lbl in data_module.label2id.keys()
+                             if lbl not in {'O', 'X', 'PAD'}],
             prefix="eval"
         )
 

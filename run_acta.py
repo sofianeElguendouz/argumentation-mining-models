@@ -608,12 +608,6 @@ if __name__ == "__main__":
     parser.add_argument("--fp16",
                         action="store_true",
                         help="Whether to use 16-bit (mixed) precision")
-    parser.add_argument("--server-ip",
-                        default="",
-                        help="For distant debugging.")
-    parser.add_argument("--server-port",
-                        default="",
-                        help="For distant debugging.")
     parser.add_argument("--debug",
                         action="store_true",
                         help="Set for debug mode.")
@@ -670,16 +664,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     config.num_devices = config.num_devices if config.num_devices > 0 else "auto"
-
-    # Setup distant debugging if needed
-    if config.server_ip and config.server_port:
-        # Distant debugging
-        # see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
-        import ptvsd
-
-        logger.debug("Waiting for debugger attach")
-        ptvsd.enable_attach(address=(config.server_ip, config.server_port), redirect_output=True)
-        ptvsd.wait_for_attach()
 
     logger.info(
         f"Accelerator: {config.accelerator}.\n"

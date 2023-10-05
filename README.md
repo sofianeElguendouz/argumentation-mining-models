@@ -30,8 +30,15 @@ Requirements
 - The code was tested under Python 3.10.8. It might run under lower versions of
   Python but it wasn't tested on those.
 - The required packages are listed in [`requirements.txt`](./requirements.txt).
-- The code is heavily dependent on 2 major libraries:
-  [Lightning](https://lightning.ai/) and [Hugging Face](https://huggingface.co/)
+  - Alternatively you have a Conda Environment in
+    [`environment.yml`](./environment.yml). But bear in mind this was done for
+    internal development of the module to run it on our hardware, its not
+    guaranteed to run in yours.
+- The code is heavily dependent on the following libraries:
+  - [Lightning](https://lightning.ai/) >= 2: Developed with 2.0.9
+  - [Hugging Face](https://huggingface.co/) >= 4: Developed with 4.33.2
+  - [Pytorch-CRF](https://pytorch-crf.readthedocs.io/en/stable/): Developed with
+    0.7.2
 
 Usage
 -----

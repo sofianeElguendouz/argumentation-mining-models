@@ -1,6 +1,8 @@
 """
-SequenceTaggingDataset module. It has the definition of the dataset to read
-CONLL based column format for Sequence Tagging (Token Classification).
+Sequence Tagging Datasets. It has the definitions of the
+`SequenceTaggingDataset` and the `SequenceTaggingaDataModule`.
+The Dataset reads CONLL based column format for Sequence Tagging (Token
+Classification).
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -307,10 +309,10 @@ class SequenceTaggingDataModule(BaseDataModule):
         tokens with their associated prediction (one per token). If true
         labels are provided, it will add them as well.
 
-        TODO: This method doesn't make any realignment of tokens and labels, it
-        doesn't regroup the subtokens and simply returns each subtoken with the
-        corresponding label of the subtoken. For the next iteration we need to
-        address this.
+        TODO (Issue #10): This method doesn't make any realignment of tokens and
+        labels, it doesn't regroup the subtokens and simply returns each
+        subtoken with the corresponding label of the subtoken. For the next
+        iteration we need to address this.
 
         Parameters
         ----------
@@ -384,6 +386,9 @@ class SequenceTaggingDataModule(BaseDataModule):
             return outputs
 
     def _load_dataset_split(self, path_to_dataset: str) -> SequenceTaggingDataset:
+        """
+        Check BaseDataModule for documentation.
+        """
         return SequenceTaggingDataset(
             tokenizer=self.tokenizer,
             path_to_dataset=path_to_dataset,

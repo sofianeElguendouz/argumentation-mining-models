@@ -1,5 +1,6 @@
 """
-Utilities module for the ACTA library.
+This module holds different types of utilities (functions and classes) for the
+ACTA library.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -25,10 +26,34 @@ from typing import Dict, List, Optional, Union
 
 def compute_metrics(true_labels: List[Union[int, str]],
                     pred_labels: List[Union[int, str]],
-                    limited_labels: Optional[List[Union[int, str]]] = None,
+                    relevant_labels: Optional[List[Union[int, str]]] = None,
                     prefix: Optional[str] = None) -> Dict[str, float]:
     """
-    Helper function to compute F1-score and Accuracy metrics
+    Function to compute accuracy and F1-score, macro and micro averaged, with the
+    option to limit the F1-score only to relevant labels.
+
+    Parameters
+    ----------
+    true_labels: List[int|str]
+        The list (or can be any ordered iterable as well) of the true labels
+        (ground truth).
+    pred_labels: List[int|str]
+        The list (or can be any ordered iterable as well) of the predicted
+        labels.
+    relevant_labels: Optional[List[int|str]]
+        If given, it will calculate the F1-score micro and macro averaged only
+        over the given labels (relevant ones). Useful for example to remove the
+        most common labels from the final metrics.
+    prefix: Optional[str]
+        If given will prepend `<prefix>_` to the name of the metric. Useful to
+        check, for example, what was the split the metric was done in (e.g.
+        `eval_accuracy`).
+
+    Returns
+    -------
+    Dict[str, float]
+        A mapping between each of the metrics names (optionally with the
+        prepended prefix) and the metric value.
     """
     outputs = {
         "accuracy": accuracy_score(true_labels, pred_labels),
@@ -36,13 +61,13 @@ def compute_metrics(true_labels: List[Union[int, str]],
         "f1_score_micro": f1_score(true_labels, pred_labels, average="micro", zero_division=0)
     }
 
-    if limited_labels is not None:
+    if relevant_labels is not None:
         # F1 macro and micro averages for specific classes
         outputs["f1_score_macro_limited"] = f1_score(
-            true_labels, pred_labels, average="macro", zero_division=0, labels=limited_labels
+            true_labels, pred_labels, average="macro", zero_division=0, labels=relevant_labels
         )
         outputs["f1_score_micro_limited"] = f1_score(
-            true_labels, pred_labels, average="micro", zero_division=0, labels=limited_labels
+            true_labels, pred_labels, average="micro", zero_division=0, labels=relevant_labels
         )
 
     if prefix:
@@ -54,7 +79,14 @@ def compute_metrics(true_labels: List[Union[int, str]],
 class TTYAwareProgressBar(TQDMProgressBar):
     """
     A Wrapper Callback around TQDMProgressBar that is TTY aware, thus using the
-    TQDM bar or just printing to screen if not connected to a terminal.
+    TQDM bar when possible or just printing to screen if not connected to a
+    terminal (thus avoiding problems with the `\r` applied by tqdm).
+
+    This class follows the same implementation as
+    `lightning.pytorch.callbacks.TQDMProgressBar`.
+
+    For documentation please check:
+    https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.callbacks.TQDMProgressBar.html
     """
     def init_predict_tqdm(self):
         bar = super().init_predict_tqdm()
@@ -92,6 +124,10 @@ class TTYAwareProgressBar(TQDMProgressBar):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
         current = batch_idx + 1
+        # The following if checks if the stdout is not a tty (i.e. a termianal)
+        # and if it isn't and the time for refreshing was reached, then prints
+        # the progress to the output (this is the same guard in case of test and
+        # validation)
         if not sys.stdout.isatty() and \
                 (current % self.refresh_rate == 0 or current == self.train_progress_bar.total):
             self._print_progress("Training", trainer.current_epoch, current,

@@ -36,6 +36,7 @@ from acta.models import RelationClassificationTransformerModule, SequenceTagging
 from acta.utils import compute_metrics, TTYAwareProgressBar
 
 
+# Available models to train
 MODELS = {
     'bert': 'bert-base-uncased',
     'biobert': 'monologg/biobert_v1.1_pubmed',
@@ -46,6 +47,8 @@ MODELS = {
     'xlm-roberta': 'xlm-roberta-base',
     'tiny-bert': 'prajjwal1/bert-tiny'  # Only for debug purposes
 }
+
+# Available tasks to work with
 TASKS = {
     'rel-class': (RelationClassificationDataModule, RelationClassificationTransformerModule, 'tsv'),
     'seq-tag': (SequenceTaggingDataModule, SequenceTaggingTransformerModule, 'conll')
@@ -109,7 +112,28 @@ def get_data_splits(input_dir: PosixPath, task_type: str) -> Dict[str, PosixPath
 def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
                 config: argparse.Namespace) -> Tuple[pl.Trainer, ModelCheckpoint]:
     """
-    Trains a model and returns the checkpoints for that model.
+    Trains a model and returns the Lightning Trainer and the Checkpoints to the trained
+    model.
+
+    Parameters
+    ----------
+    data_module: LightningDataModule
+        This is one of the possible Data Modules defined in `TASKS`, either for
+        relation classification or for sequence tagging. For more information
+        check `acta.data.base.BaseDataModule` and it's children classes.
+    model: LightningModule
+        This is one of the possible Lightning Modules in `TASKS`, either for
+        relation classificaion or for sequence tagging. For more information
+        check `acta.models.base.BaseTransformerModule` and it's children classes.
+    config: Namespace
+        The Namespace configuration that is parsed from the command line via
+        argparse.
+
+    Returns
+    -------
+    Tuple[Trainer, ModelCheckpoint]
+        A tuple with the Lightning Trainer and the ModelCheckpoint to evaluate
+        possible checkpoints.
     """
     model_name = config.model if config.model in MODELS else os.path.basename(config.model)
     model_name = f"{model_name}_{config.task_type}"
@@ -184,7 +208,38 @@ def evaluate_model(data_module: pl.LightningDataModule,
                    model_or_checkpoint: Union[pl.LightningModule, PosixPath],
                    config: argparse.Namespace, trainer: pl.Trainer, model_name: str):
     """
-    Evaluates a single model and write its outputs.
+    Evaluates a single model and write its results to the path given by the
+    configuration.
+
+    The results file will be the following:
+        - A predictions files that will be either a tsv or a conll file
+          (depending on the task) that will have the predictions for the
+          evaluation split in text format. One per model checkpoint.
+        - A reports file that will show the classification report of the
+          model. One per model checkpoint.
+        - The metrics files (with different metrics such as accuracy,
+          f1-score macro and micro average, etc) with the evaluated metric
+          result across the different checkpoints. One file per metric
+          with all the checkpoints.
+
+    Parameters
+    ----------
+    data_module: LightningDataModule
+        This is one of the possible Data Modules defined in `TASKS`, either for
+        relation classification or for sequence tagging. For more information
+        check `acta.data.base.BaseDataModule` and it's children classes.
+    model_or_checkpoint: LightningModule | PosixPath
+        The model to be evaluated. It can either be a Lightning Module or the
+        Path to a checkpoint that is a Lightning Module.
+    config: Namespace
+        The Namespace configuration that is parsed from the command line via
+        argparse.
+    trainer: Trainer
+        A trainer to run the predictions. It can either be the trainer obtained
+        from `train_model` or a trainer created by `evaluate_models`
+        specifically for the task at hand.
+    model_name: str
+        The name of the model. Useful to store the results information of the model.
     """
     logger.info(f"Evaluating {model_name}")
     results_dir = config.output_dir / 'results' / config.timestamp
@@ -215,7 +270,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
         metrics = compute_metrics(
             true_labels, pred_labels,
-            limited_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
+            relevant_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
             prefix="eval"
         )
     elif config.task_type == 'seq-tag':
@@ -231,8 +286,8 @@ def evaluate_model(data_module: pl.LightningDataModule,
                                for sentence in decoded_predictions]), file=fh)
         metrics = compute_metrics(
             true_labels, pred_labels,
-            limited_labels=[lbl for lbl in data_module.label2id.keys()
-                            if lbl not in {'O', 'X', 'PAD'}],
+            relevant_labels=[lbl for lbl in data_module.label2id.keys()
+                             if lbl not in {'O', 'X', 'PAD'}],
             prefix="eval"
         )
 
@@ -257,9 +312,30 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                     config: argparse.Namespace, trainer: Optional[pl.Trainer] = None,
                     model_checkpoints: Optional[ModelCheckpoint] = None):
     """
-    Evaluates the model on the evaluation dataset. Depending on the options, it
-    will evaluate only in the final model or in all the models in the
-    checkpoints.
+    Evaluates the model on the evaluation dataset, calling the `evaluate_model`
+    procedure. Depending on the options, it will evaluate only in the final
+    model or in all the models in the checkpoints.
+
+    Parameters
+    ----------
+    data_module: LightningDataModule
+        This is one of the possible Data Modules defined in `TASKS`, either for
+        relation classification or for sequence tagging. For more information
+        check `acta.data.base.BaseDataModule` and it's children classes.
+    model: LightningModule
+        The model to be evaluated. Depending on the configuration it will
+        use this model or checkpointed weights of this model.
+    config: Namespace
+        The Namespace configuration that is parsed from the command line via
+        argparse.
+    trainer: Optional[Trainer]
+        A trainer to run the predictions. It is the one returned by the
+        `train_model` procedure. If not given (because it was no training), the
+        procedure wll create a trainer for the evaluation tasks.
+    model_checkpoints: Optional[ModelCheckpoint]
+        The Model's Checkpoints returned by the `train_model` procedure. If not
+        given (because it was no training), the procedure wll create a trainer
+        for the evaluation tasks.
     """
     # Create the results directory (should be unique)
     os.makedirs(config.output_dir / 'results' / config.timestamp)
@@ -611,6 +687,7 @@ if __name__ == "__main__":
     else:
         hf_tokenizer_name_or_path = config.model
 
+    # Instantiate data module
     data_module = TASKS[config.task_type][0](
         data_splits=data_splits,
         tokenizer_name_or_path=hf_tokenizer_name_or_path,
@@ -636,6 +713,7 @@ if __name__ == "__main__":
     else:
         hf_model_name_or_path = config.model
 
+    # Instantiate (or load) model
     if config.load_from_checkpoint is not None:
         if not Path(config.load_from_checkpoint).is_file():
             logger.error(f"The checkpoint file doesn't exists: {config.load_from_checkpoint}")

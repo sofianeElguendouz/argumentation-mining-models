@@ -1,6 +1,7 @@
 """
-RelationClassificationDataset module. It has the definition of the dataset to read
-column based data (csv, tsv) for Relation classification.
+Relation Classification Datasets. It has the definitions of the
+`RelationClassificationDataset` and the `RelationClassificationDataModule`.
+The Dataset reads column based data (csv, tsv) for Relation Classification.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -216,6 +217,9 @@ class RelationClassificationDataModule(BaseDataModule):
                 ]
 
     def _load_dataset_split(self, path_to_dataset: str) -> RelationClassificationDataset:
+        """
+        Check BaseDataModule for documentation.
+        """
         return RelationClassificationDataset(
             tokenizer=self.tokenizer,
             path_to_dataset=path_to_dataset,

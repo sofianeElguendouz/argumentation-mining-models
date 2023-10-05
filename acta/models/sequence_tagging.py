@@ -28,7 +28,41 @@ from .base import BaseTransformerModule
 
 class SequenceTaggingTransformerModule(BaseTransformerModule):
     """
-    TODO: Add docstring
+    Lightning Module for sequence tagging (i.e. classify each token in a
+    sequence of tokens).
+
+    It adds a Bidirectional Recurrent Neural Network (a GRU in this case) with a
+    Linear Projection and uses Pytorch CRF for the loss for Sequence Tagging.
+
+    This model was presentend in the work of Mayer, Cabrio and Villata:
+    "Transformer-based Argument Mining for Healthcare Applications" presented in
+    ECAI 2020. For more information check: https://hal.science/hal-02879293/
+
+    Parameters
+    ----------
+    model_name_or_path: str
+        Refer to BaseTransformerModule.
+    label2id: Dict[str, int]
+        Refer to BaseTransformerModule.
+    id2label: Dict[int, str]
+        Refer to BaseTransformerModule.
+    config_name_or_path: Optional[str]
+        Refer to BaseTransformerModule.
+    cache_dir: Optional[str]
+        Refer to BaseTransformerModule.
+    masked_label: int
+        The value assigned to the label id that is going to be masked by the
+        CRF. It is usually the padding label id.
+    learning_rate: float
+        Refer to BaseTransformerModule.
+    weight_decay: float
+        Refer to BaseTransformerModule.
+    adam_epsilon: float
+        Refer to BaseTransformerModule.
+    warmup_steps: int
+        Refer to BaseTransformerModule.
+    **kwargs
+        Refer to BaseTransformerModule.
     """
     def __init__(self,
                  model_name_or_path: str,

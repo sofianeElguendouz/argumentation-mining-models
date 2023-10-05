@@ -26,7 +26,31 @@ from .base import BaseTransformerModule
 
 class RelationClassificationTransformerModule(BaseTransformerModule):
     """
-    TODO: Add docstring
+    Lightning Module for classification of relationship between a pairs of
+    sentences (e.g. supports, attacks, etc.).
+
+    Parameters
+    ----------
+    model_name_or_path: str
+        Refer to BaseTransformerModule.
+    label2id: Dict[str, int]
+        Refer to BaseTransformerModule.
+    id2label: Dict[int, str]
+        Refer to BaseTransformerModule.
+    config_name_or_path: Optional[str]
+        Refer to BaseTransformerModule.
+    cache_dir: Optional[str]
+        Refer to BaseTransformerModule.
+    learning_rate: float
+        Refer to BaseTransformerModule.
+    weight_decay: float
+        Refer to BaseTransformerModule.
+    adam_epsilon: float
+        Refer to BaseTransformerModule.
+    warmup_steps: int
+        Refer to BaseTransformerModule.
+    **kwargs
+        Refer to BaseTransformerModule.
     """
     def __init__(self,
                  model_name_or_path: str,
@@ -60,6 +84,11 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
         return self(**batch).loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
+        """
+        Prediction step. It returns the inputs_ids (i.e. tokens ids), the real
+        labels (if they are present) and the predictions (which are an argmax
+        over the logits).
+        """
         labels = batch.pop('labels', None)
         predictions = self(**batch).logits.argmax(1)
 

@@ -1,6 +1,6 @@
 """
-Module for abstract class which serves as the base model for combining Pytorch Lightning with
-Hugging Face Transformers models.
+Module for the abstract class which serves as the base model for combining
+Pytorch Lightning with Hugging Face Transformers models.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -20,14 +20,20 @@ Hugging Face Transformers models.
 import lightning.pytorch as pl
 import torch
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from transformers import AutoConfig, get_linear_schedule_with_warmup
-from typing import Any, Dict, Optional
+from transformers.tokenization_utils_base import BatchEncoding
+from typing import Dict, Optional
 
 
 class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     """
     Abstract Base Class for a Transformer Module.
+
+    For more information check the LightningModule documentation and the
+    tutorial on finetuning Hugging Face Transfomers with Pytorch Lightning:
+    - https://lightning.ai/docs/pytorch/stable/common/lightning_module.html
+    - https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/text-transformers.html
 
     Parameters
     ----------
@@ -51,6 +57,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         The Adam Epsilon constant.
     warmup_steps: int
         The number of warmup steps.
+    **kwargs
+        Extra keyword arguments dependant on the children classes.
     """
     def __init__(self,
                  model_name_or_path: str,
@@ -64,6 +72,13 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                  warmup_steps: int = 0,
                  **kwargs):
         super().__init__()
+
+        if len(label2id) != len(id2label) or\
+                not all([k1 == v2 and k2 == v1 for (k1, v1), (k2, v2)
+                         in zip(label2id.items(), id2label.items())]):
+            raise ValueError("The parameters label2id and id2value are not the reverse "
+                             "of each other")
+
         self.save_hyperparameters()
 
         config_name_or_path = config_name_or_path if config_name_or_path else model_name_or_path
@@ -73,14 +88,15 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
                                                  id2label=id2label,
                                                  cache_dir=cache_dir)
 
-    def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
+    @abstractmethod
+    def _loss(self, batch: BatchEncoding) -> torch.Tensor:
         """
         Loss function calculation for a single batch of data.
         Returns the Tensor for the los value.
 
         Parameters
         ----------
-        batch: Dict[str, Any]
+        batch: BatchEncoding
             The same batch passed to `*_step`. It should have all the data
             needed to run the loss. In particular it is expected to have a
             `labels` key with the ground truth labels.
@@ -90,7 +106,6 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         torch.Tensor
             The loss for the batch.
         """
-        raise NotImplementedError()
 
     def training_step(self, batch, batch_idx):
         return self._loss(batch)

@@ -113,7 +113,8 @@ class BaseDataModule(LightningDataModule):
     data_splits: Dict[str, PosixPath]
         Mapping between splits and paths to the files corresponding to such
         splits. It must have at least 1 split otherwise it will raise
-        ValueError.
+        ValueError. The data split must be one of {'train', 'test',
+        'validation'}.
     tokenizer_name_or_path: str
         Name or path to a Hugging Face Tokenizer to load.
     tokenizer_config: Dict[str, Any]
@@ -125,10 +126,12 @@ class BaseDataModule(LightningDataModule):
     eval_batch_size: int
         Size of the evaluation batches (per GPU/CPU if distributed).
     evaluation_split: Optional[str]
-        The split to use for evaluation.
+        The split to use for evaluation. If given, it must be one of {'train',
+        'test', 'validation'}.
     num_workers: int
         Number of workers to use. If < 0 uses all cpus.
     """
+
     def __init__(self,
                  data_splits: Dict[str, PosixPath],
                  tokenizer_name_or_path: str,
@@ -142,6 +145,12 @@ class BaseDataModule(LightningDataModule):
 
         if len(data_splits) == 0:
             raise ValueError("The `data_splits` argument must not be empty.")
+
+        valid_splits = {'train', 'test', 'validation'}
+        if not valid_splits.issuperset(data_splits.keys()):
+            raise ValueError(f"The data splits must be one of: {', '.join(valid_splits)}")
+        if evaluation_split is not None and evaluation_split not in valid_splits:
+            raise ValueError(f"The evaluation split must be in one of: {', '.join(valid_splits)}")
 
         self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
@@ -186,8 +195,8 @@ class BaseDataModule(LightningDataModule):
     def label2id(self) -> Dict[str, int]:
         """
         Proxy method to access one of the datasets `label2id` which can differ
-        from the DataModule labels (e.g. by having extra labels such as the
-        extension label `X` or the padding label `PAD`).
+        from the DataModule `labels` property (e.g. by having extra labels such
+        as the extension label `X` or the padding label `PAD`).
 
         It will try to access based on a priority. First the train dataset, if
         it's not present, it will use the evaluation_split dataset. An finally

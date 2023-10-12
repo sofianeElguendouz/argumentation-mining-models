@@ -63,10 +63,10 @@ def compute_metrics(true_labels: List[Union[int, str]],
 
     if relevant_labels is not None:
         # F1 macro and micro averages for specific classes
-        outputs["f1_score_macro_limited"] = f1_score(
+        outputs["relevant_f1_score_macro"] = f1_score(
             true_labels, pred_labels, average="macro", zero_division=0, labels=relevant_labels
         )
-        outputs["f1_score_micro_limited"] = f1_score(
+        outputs["relevant_f1_score_micro"] = f1_score(
             true_labels, pred_labels, average="micro", zero_division=0, labels=relevant_labels
         )
 

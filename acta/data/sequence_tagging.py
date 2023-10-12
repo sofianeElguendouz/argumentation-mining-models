@@ -275,28 +275,26 @@ class SequenceTaggingDataModule(BaseDataModule):
     DataModule for sequence tagging (i.e. classify each token in a sequence of
     tokens).
     """
+    LABELS = [
+        "O",
+        "B-Claim",
+        "I-Claim",
+        "B-Premise",
+        "I-Premise",
+        "B-Marker",
+        "I-Marker",
+        "B-Treatment",
+        "I-Treatment",
+        "B-Disease",
+        "I-Disease",
+        "B-Diagnostics",
+        "I-Diagnostics"
+    ]
+
     @property
     def collate_fn(self) -> Callable:
         return DataCollatorForTokenClassification(self.tokenizer,
                                                   label_pad_token_id=self.label2id['PAD'])
-
-    @property
-    def labels(self) -> Dict[str, int]:
-        return {
-            "O": 0,
-            "B-Claim": 1,
-            "I-Claim": 2,
-            "B-Premise": 3,
-            "I-Premise": 4,
-            "B-Marker": 5,
-            "I-Marker": 6,
-            "B-Treatment": 7,
-            "I-Treatment": 8,
-            "B-Disease": 9,
-            "I-Disease": 10,
-            "B-Diagnostics": 11,
-            "I-Diagnostics": 12
-        }
 
     def decode_predictions(self,
                            input_ids: Union[List[int], List[List[int]]],

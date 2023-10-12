@@ -134,17 +134,15 @@ class RelationClassificationDataModule(BaseDataModule):
     Data module for classification of relationship between a pairs of sentences
     (e.g. supports, attacks, etc.).
     """
+    LABELS = [
+        "noRel",
+        "Support",
+        "Attack"
+    ]
+
     @property
     def collate_fn(self) -> Callable:
         return DataCollatorWithPadding(self.tokenizer)
-
-    @property
-    def labels(self) -> Dict[str, int]:
-        return {
-            "noRel": 0,
-            "Support": 1,
-            "Attack": 2
-        }
 
     def decode_predictions(self,
                            input_ids: Union[List[int], List[List[int]]],

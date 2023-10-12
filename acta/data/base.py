@@ -27,7 +27,7 @@ from lightning.pytorch import LightningDataModule
 from multiprocessing import cpu_count
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         """
 
 
-class BaseDataModule(LightningDataModule):
+class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
     """
     BaseDataModule abstract class. Contains some common implementations
     for data module classes.
@@ -117,6 +117,12 @@ class BaseDataModule(LightningDataModule):
         'validation'}.
     tokenizer_name_or_path: str
         Name or path to a Hugging Face Tokenizer to load.
+    labels: List[str]
+        The set of labels (that will be returned by the property `labels`).  The
+        labels should be unique and sorted (each label will correspond to the
+        index it belongs in the list, starting by 0). If not given, it will
+        resort to the class attribute `LABELS` which should be defined for each
+        subclass.
     tokenizer_config: Dict[str, Any]
         Extra tokenizer specific config (e.g. do_lower_case, cache_dir, use_fast, etc)
     datasets_config: Dict[str, Any]
@@ -135,6 +141,7 @@ class BaseDataModule(LightningDataModule):
     def __init__(self,
                  data_splits: Dict[str, PosixPath],
                  tokenizer_name_or_path: str,
+                 labels: Optional[List[str]],
                  tokenizer_config: Dict[str, Any] = dict(use_fast=True),
                  datasets_config: Dict[str, Any] = dict(max_seq_length=128),
                  train_batch_size: int = 8,
@@ -152,6 +159,9 @@ class BaseDataModule(LightningDataModule):
         if evaluation_split is not None and evaluation_split not in valid_splits:
             raise ValueError(f"The evaluation split must be in one of: {', '.join(valid_splits)}")
 
+        if labels is not None and len(labels) != len(set(labels)):
+            raise ValueError("The labels should be unique.")
+
         self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
@@ -163,33 +173,35 @@ class BaseDataModule(LightningDataModule):
         self.evaluation_split = evaluation_split
         self.num_workers = num_workers if num_workers > 0 else cpu_count()
 
+        if labels is None:
+            labels = self.LABELS
+        self._labels = {lbl: idx for idx, lbl in enumerate(labels)}
+
         # Silencing the warning to pad with fast tokenizer since with Lightning this is
         # not possible unless we pad beforehand
         self.tokenizer.deprecation_warnings["Asking-to-pad-a-fast-tokenizer"] = True
 
+    @classmethod
     @property
     @abstractmethod
-    def collate_fn(self) -> Callable:
+    def LABELS(cls) -> List[str]:
         """
-        Returns the collate function. It depends on the type of dataset.
-
-        Returns
-        -------
-        Callable
-            A function or class with the __call__ method implemented.
+        This should be overriden by the subclasses (as a class attribute),
+        otherwise it will fail when trying to instantiate in the `__init__`
+        method if no `labels` attribute is given.
         """
 
     @property
-    @abstractmethod
     def labels(self) -> Dict[str, int]:
         """
-        Property that defines the map betwenn labels and ids for the Datasets.
+        Property that displays the map betwenn labels and ids for the Datasets.
 
         Returns
         -------
         Dict[str, int]
             Mapping between a label and its corresponding numerical id.
         """
+        return self._labels
 
     @property
     def label2id(self) -> Dict[str, int]:
@@ -240,6 +252,18 @@ class BaseDataModule(LightningDataModule):
         else:
             # Return whatever dataset that is present as a last resource
             return list(self.datasets.values())[0].id2label
+
+    @property
+    @abstractmethod
+    def collate_fn(self) -> Callable:
+        """
+        Returns the collate function. It depends on the type of dataset.
+
+        Returns
+        -------
+        Callable
+            A function or class with the __call__ method implemented.
+        """
 
     def prepare_data(self):
         """

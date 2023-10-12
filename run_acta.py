@@ -168,7 +168,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         accelerator=config.accelerator,
         devices=config.num_devices,
         strategy='ddp_find_unused_parameters_true',
-	precision='16-mixed' if config.fp16 else '32-true',
+        precision='16-mixed' if config.fp16 else '32-true',
         logger=model_logger,
         callbacks=callbacks,
         max_epochs=config.epochs if config.max_steps < 0 else None,
@@ -269,9 +269,13 @@ def evaluate_model(data_module: pl.LightningDataModule,
         with open(results_dir / f'{model_name}_predictions.tsv', 'w') as fh:
             print('true\tpredicted\tsentence1\tsentence2', file=fh)
             print('\n'.join(['\t'.join(pred) for pred in decoded_predictions]), file=fh)
+        if config.relevant_labels is not None:
+            relevant_labels = config.relevant_labels
+        else:
+            relevant_labels = [lbl for lbl in data_module.label2id.keys() if lbl != 'noRel']
         metrics = compute_metrics(
             true_labels, pred_labels,
-            relevant_labels=[lbl for lbl in data_module.label2id.keys() if lbl != 'noRel'],
+            relevant_labels=relevant_labels,
             prefix="eval"
         )
     elif config.task_type == 'seq-tag':
@@ -285,10 +289,14 @@ def evaluate_model(data_module: pl.LightningDataModule,
         with open(results_dir / f'{model_name}_predictions.conll', 'w') as fh:
             print("\n\n".join(["\n".join(["\t".join(token) for token in sentence])
                                for sentence in decoded_predictions]), file=fh)
+        if config.relevant_labels is not None:
+            relevant_labels = config.relevant_labels
+        else:
+            relevant_labels = [lbl for lbl in data_module.label2id.keys()
+                               if lbl not in {'O', 'X', 'PAD'}]
         metrics = compute_metrics(
             true_labels, pred_labels,
-            relevant_labels=[lbl for lbl in data_module.label2id.keys()
-                             if lbl not in {'O', 'X', 'PAD'}],
+            relevant_labels=relevant_labels,
             prefix="eval"
         )
 
@@ -520,6 +528,17 @@ if __name__ == "__main__":
                         action="store_true",
                         help="If active, runs validation after `--log-every-n-steps` steps. "
                              "Validation is useful for early stopping of the training process.")
+    parser.add_argument("--labels",
+                        default=None,
+                        nargs="*",
+                        help="The list of labels (separated by spaces) for the task. "
+                             "If not given it will fallback to the default labels for the task.")
+    parser.add_argument("--relevant-labels",
+                        default=None,
+                        nargs="*",
+                        help="The list of relevant labels for the task, so it will calculate "
+                             "the metrics with these relevant labels in consideration. If not "
+                             "given it will fall back to the relevant labels for the task.")
     parser.add_argument("--accelerator",
                         default="auto",
                         help="What device to use as accelerator (cpu, gpu, tpu, etc).")
@@ -692,6 +711,7 @@ if __name__ == "__main__":
     data_module = TASKS[config.task_type][0](
         data_splits=data_splits,
         tokenizer_name_or_path=hf_tokenizer_name_or_path,
+        labels=config.labels,
         tokenizer_config=dict(
             cache_dir=config.cache_dir,
             do_lower_case=config.lower_case,

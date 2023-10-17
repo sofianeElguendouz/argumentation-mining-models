@@ -145,11 +145,15 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         version=config.timestamp
     )
 
+    checkpoint_path = config.output_dir / config.checkpoint_path
+    if config.timestamp_checkpoints:
+        checkpoint_path = checkpoint_path / config.timestamp
     model_checkpoints = ModelCheckpoint(
-        dirpath=config.output_dir / config.checkpoint_path,
+        dirpath=checkpoint_path,
         filename=model_name + "_{epoch:02d}_{step:05d}",
         save_top_k=-1,  # Save all models
-        every_n_train_steps=config.save_every_n_steps
+        every_n_train_steps=config.save_every_n_steps,
+        enable_version_counter=False  # Overwrite existing checkpoints
     )
     callbacks.append(model_checkpoints)
 
@@ -511,6 +515,14 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint-path",
                         default="checkpoints",
                         help="Name of directory (inside output-dir) to store the checkpoint files.")
+    parser.add_argument("--timestamp-checkpoints",
+                        action="store_true",
+                        help="If active, it will create a directory under `--checkpoint-path` with "
+                             "a timestamp to store the checkpoints (this is to avoid checkpoint "
+                             "overwriting when running multiple experiments in parallel). "
+                             "Warning: This is only valid in training mode. If you want to "
+                             "evaluate existing checkpoint inside a directory with timestamp you "
+                             "need to provide the path to the checkpoints directory in full.")
     parser.add_argument("--load-from-checkpoint",
                         help="Path to a checkpoint file to continue training.")
     parser.add_argument("--logging-dir",

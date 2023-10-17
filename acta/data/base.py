@@ -164,7 +164,10 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
 
         self.data_splits = data_splits
         self.tokenizer_name_or_path = tokenizer_name_or_path
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
+        if self.tokenizer_name_or_path == "roberta-base":
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, add_prefix_space=True, **tokenizer_config)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **tokenizer_config)
         self.datasets = {}
         self.datasets_config = datasets_config
         self.train_batch_size = train_batch_size

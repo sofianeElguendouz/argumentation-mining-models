@@ -50,9 +50,12 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         Refer to BaseTransformerModule.
     cache_dir: Optional[str]
         Refer to BaseTransformerModule.
-    masked_label: int
-        The value assigned to the label id that is going to be masked by the
-        CRF. It is usually the padding label id.
+    masked_label_id: Optional[int]
+        If given number (defaults to None), it masks the given label id in the
+        CRF function.  This can fail if the given `masked_label_id` is present
+        at the beggining of the sequence (e.g. if the special tokens for a
+        transformer are not given the extension label but rather use the same
+        'PAD' label that you are trying to mask).
     learning_rate: float
         Refer to BaseTransformerModule.
     weight_decay: float
@@ -70,7 +73,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
                  id2label: Dict[int, str],
                  config_name_or_path: Optional[str] = None,
                  cache_dir: Optional[str] = None,
-                 masked_label: int = -100,
+                 masked_label_id: Optional[int] = None,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
@@ -79,7 +82,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         super().__init__(model_name_or_path=model_name_or_path,
                          label2id=label2id, id2label=id2label,
                          config_name_or_path=config_name_or_path,
-                         cache_dir=cache_dir, masked_label=masked_label,
+                         cache_dir=cache_dir, masked_label_id=masked_label_id,
                          learning_rate=learning_rate, weight_decay=weight_decay,
                          adam_epsilon=adam_epsilon, warmup_steps=warmup_steps,
                          **kwargs)
@@ -110,7 +113,10 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         labels = batch.pop('labels')
         path, emissions = self(**batch)
-        mask = (labels != self.hparams.masked_label)
+        if self.hparams.masked_label_id is not None:
+            mask = (labels != self.hparams.masked_label_id)
+        else:
+            mask = None
 
         return -self.crf(emissions, labels, mask=mask)
 

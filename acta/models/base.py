@@ -75,7 +75,8 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
 
         if len(label2id) != len(id2label) or\
                 not all([k1 == v2 and k2 == v1 for (k1, v1), (k2, v2)
-                         in zip(label2id.items(), id2label.items())]):
+                         in zip(sorted(label2id.items(), key=lambda x: x[0]),
+                                sorted(id2label.items(), key=lambda x: x[1]))]):
             raise ValueError("The parameters label2id and id2value are not the reverse "
                              "of each other")
 

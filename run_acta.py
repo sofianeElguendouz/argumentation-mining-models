@@ -759,7 +759,6 @@ if __name__ == "__main__":
             label2id=data_module.label2id,
             config_name_or_path=config.config,
             cache_dir=config.cache_dir,
-            masked_label=data_module.label2id.get('PAD', -100),
             learning_rate=config.learning_rate,
             weight_decay=config.weight_decay,
             adam_epsilon=config.adam_epsilon,

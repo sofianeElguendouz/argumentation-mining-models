@@ -33,7 +33,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import compute_metrics, TTYAwareProgressBar
+from acta.utils import compute_metrics, compute_seq_tag_labels_metrics, TTYAwareProgressBar
 
 
 # Available models to train
@@ -303,6 +303,12 @@ def evaluate_model(data_module: pl.LightningDataModule,
             relevant_labels=relevant_labels,
             prefix="eval"
         )
+        seq_tag_metrics = compute_seq_tag_labels_metrics(
+            true_labels, pred_labels,
+            labels=list(data_module.label2id.keys()),
+            prefix="eval"
+        )
+        metrics = dict(**metrics, **seq_tag_metrics)
 
     hf_model, task_name = model_name.split('_', 2)[:2]
     for metric, value in metrics.items():
@@ -313,7 +319,10 @@ def evaluate_model(data_module: pl.LightningDataModule,
     with open(results_dir / f'{model_name}_report.txt', 'wt') as fh:
         print(
             classification_report(
-                true_labels, pred_labels, labels=list(data_module.label2id.keys()), zero_division=0
+                true_labels, pred_labels,
+                # Remove the PAD label as it shouldn't be taken into consideration
+                labels=list([lbl for lbl in data_module.label2id.keys() if lbl != 'PAD']),
+                zero_division=0
             ),
             file=fh
         )

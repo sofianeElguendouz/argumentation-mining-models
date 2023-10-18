@@ -33,7 +33,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import compute_metrics, TTYAwareProgressBar
+from acta.utils import compute_metrics, compute_seq_tag_labels_metrics, TTYAwareProgressBar
 
 
 # Available models to train
@@ -145,11 +145,15 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         version=config.timestamp
     )
 
+    checkpoint_path = config.output_dir / config.checkpoint_path
+    if config.timestamp_checkpoints:
+        checkpoint_path = checkpoint_path / config.timestamp
     model_checkpoints = ModelCheckpoint(
-        dirpath=config.output_dir / config.checkpoint_path,
+        dirpath=checkpoint_path,
         filename=model_name + "_{epoch:02d}_{step:05d}",
         save_top_k=-1,  # Save all models
-        every_n_train_steps=config.save_every_n_steps
+        every_n_train_steps=config.save_every_n_steps,
+        enable_version_counter=False  # Overwrite existing checkpoints
     )
     callbacks.append(model_checkpoints)
 
@@ -299,6 +303,12 @@ def evaluate_model(data_module: pl.LightningDataModule,
             relevant_labels=relevant_labels,
             prefix="eval"
         )
+        seq_tag_metrics = compute_seq_tag_labels_metrics(
+            true_labels, pred_labels,
+            labels=list(data_module.label2id.keys()),
+            prefix="eval"
+        )
+        metrics = dict(**metrics, **seq_tag_metrics)
 
     hf_model, task_name = model_name.split('_', 2)[:2]
     for metric, value in metrics.items():
@@ -309,7 +319,10 @@ def evaluate_model(data_module: pl.LightningDataModule,
     with open(results_dir / f'{model_name}_report.txt', 'wt') as fh:
         print(
             classification_report(
-                true_labels, pred_labels, labels=list(data_module.label2id.keys()), zero_division=0
+                true_labels, pred_labels,
+                # Remove the PAD label as it shouldn't be taken into consideration
+                labels=list([lbl for lbl in data_module.label2id.keys() if lbl != 'PAD']),
+                zero_division=0
             ),
             file=fh
         )
@@ -511,6 +524,14 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint-path",
                         default="checkpoints",
                         help="Name of directory (inside output-dir) to store the checkpoint files.")
+    parser.add_argument("--timestamp-checkpoints",
+                        action="store_true",
+                        help="If active, it will create a directory under `--checkpoint-path` with "
+                             "a timestamp to store the checkpoints (this is to avoid checkpoint "
+                             "overwriting when running multiple experiments in parallel). "
+                             "Warning: This is only valid in training mode. If you want to "
+                             "evaluate existing checkpoint inside a directory with timestamp you "
+                             "need to provide the path to the checkpoints directory in full.")
     parser.add_argument("--load-from-checkpoint",
                         help="Path to a checkpoint file to continue training.")
     parser.add_argument("--logging-dir",
@@ -747,7 +768,6 @@ if __name__ == "__main__":
             label2id=data_module.label2id,
             config_name_or_path=config.config,
             cache_dir=config.cache_dir,
-            masked_label=data_module.label2id.get('PAD', -100),
             learning_rate=config.learning_rate,
             weight_decay=config.weight_decay,
             adam_epsilon=config.adam_epsilon,

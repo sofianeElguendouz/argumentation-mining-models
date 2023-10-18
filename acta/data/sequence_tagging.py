@@ -19,12 +19,16 @@ Classification).
    limitations under the License.
 """
 
+import logging
+
 from itertools import chain
 from transformers import AutoTokenizer, DataCollatorForTokenClassification
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from .base import BaseDataset, BaseDataModule
+
+logger = logging.getLogger()
 
 
 class SequenceTaggingDataset(BaseDataset):
@@ -60,19 +64,15 @@ class SequenceTaggingDataset(BaseDataset):
         CONLL dataset.
     use_extension_label: bool
         If true, uses a special label 'X' for special tokens in the transformer
-        (e.g. [CLS], [SEP], <s>, etc.). If false, it will replace such labels
-        with a special padding label 'PAD' equal to -100 that will be ignored by
-        losses such as `torch.nn.CrossEntropy`. Careful because losses such as
-        `pytorchcrf.CRF` will most likely fail (or have an unexpected behavior)
-        for the case of using the -100 label.
-        For more information on why to use -100 check:
-        https://huggingface.co/docs/transformers/tasks/token_classification#preprocess
+        (e.g. [CLS], [SEP], <s>, etc.) as well as subtokens (if
+        copy_label_to_subtoken is false).  If false, it will use the 'PAD' label
+        instead.
     copy_label_to_subtoken: bool
         If true, when a token is separated in subtokens by the tokenizer, it
         copies the label to each subtoken. If it false, the assigned label to
         each subtoken after the first will depend on the value of
         `use_extension_label`. If the extension label 'X' exists, it will use
-        it, otherwise it will use the special 'PAD' label assigned to -100.
+        it, otherwise it will use the special 'PAD' label.
     """
     def __init__(self,
                  tokenizer: AutoTokenizer,
@@ -84,7 +84,7 @@ class SequenceTaggingDataset(BaseDataset):
                  delimiter: str = '\t',
                  token_position: int = 1,
                  label_position: int = 4,
-                 use_extension_label: bool = True,
+                 use_extension_label: bool = False,
                  copy_label_to_subtoken: bool = True,
                  **kwargs):
         super().__init__(tokenizer=tokenizer,
@@ -96,19 +96,25 @@ class SequenceTaggingDataset(BaseDataset):
 
         self.use_extension_label = use_extension_label
         self.copy_label_to_subtoken = copy_label_to_subtoken
-        if self.use_extension_label:
-            if 'X' not in self.label2id:
-                # Add the extended label
-                self.label2id['X'] = len(self.label2id)
-                self.id2label[self.label2id['X']] = 'X'
-            if 'PAD' not in self.label2id:
-                # Add the pad label (after the extension label)
-                self.label2id['PAD'] = len(self.label2id)
-                self.id2label[self.label2id['PAD']] = 'PAD'
+
+        if 'PAD' not in self.label2id and 0 in self.id2label:
+            replace_label = self.id2label[0]
+            logger.warning(f"Replacing the id of label '{replace_label}' because 0 is reserved "
+                           f"for special padding label 'PAD'. The new id of '{replace_label}' "
+                           f"will be '{len(self.label2id)}'")
+            self.label2id[replace_label] = len(self.label2id)
+            self.id2label[self.label2id[replace_label]] = replace_label
+            self.label2id['PAD'] = 0
+            self.id2label[0] = 'PAD'
         elif 'PAD' not in self.label2id:
-            # The pad label will be -100
-            self.label2id['PAD'] = -100
-            self.id2label[self.label2id['PAD']] = 'PAD'
+            logger.warning("Prepending the special label 'PAD'.")
+            self.label2id['PAD'] = 0
+            self.id2label[0] = 'PAD'
+
+        if self.use_extension_label and 'X' not in self.label2id:
+            # Add the extension label
+            self.label2id['X'] = len(self.label2id)
+            self.id2label[self.label2id['X']] = 'X'
 
     def _load_dataset(self,
                       path_to_dataset: str,
@@ -209,16 +215,14 @@ class SequenceTaggingDataset(BaseDataset):
         for wid, attmsk in zip(word_ids, tokenized_sentence['attention_mask']):
             if wid is None:
                 if attmsk == 1:
-                    # For special tokens ([CLS], [SEP], <s>, etc) that don't have an assigned label
-                    # we use a special extension_label that, dependind on configuration can be a
-                    # value for a extension label X or a special PAD label equal to -100 (in case
-                    # of using regular transformers and not CRF which requires all labels to be
-                    # accounted).
+                    # For special tokens ([CLS], [SEP], <s>, etc) that don't have an assigned label,
+                    # depending on the configuration, we use the extension label 'X' or
+                    # the 'PAD' label
                     extension_label = self.label2id['X'] if self.use_extension_label\
                         else self.label2id['PAD']
                     sentence_labels.append(extension_label)
                 if attmsk == 0:
-                    # This is a token for padding, assign the corresponding PAD label
+                    # This is a token for padding, assign the PAD label
                     sentence_labels.append(self.label2id['PAD'])
             elif wid != previous_wid:
                 # If it is the first subtoken of a work, use its corresponding label
@@ -226,7 +230,7 @@ class SequenceTaggingDataset(BaseDataset):
             else:
                 # The other subtokens depend on configuration. For some cases it can be
                 # to replicate the label of the first subtoken. If not, the value depends
-                # on whether there is an extension label X or plainly padding with -100
+                # on whether there is an extension label 'X' or the 'PAD' label
                 if self.copy_label_to_subtoken:
                     # WARNING: This duplicates the "B-" type labels, but using another
                     # configuration to avoid that is outside this scope since it needs
@@ -276,6 +280,7 @@ class SequenceTaggingDataModule(BaseDataModule):
     tokens).
     """
     LABELS = [
+        "PAD",
         "O",
         "B-Claim",
         "I-Claim",

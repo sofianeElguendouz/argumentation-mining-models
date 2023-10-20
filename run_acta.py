@@ -736,7 +736,8 @@ if __name__ == "__main__":
         tokenizer_config=dict(
             cache_dir=config.cache_dir,
             do_lower_case=config.lower_case,
-            use_fast=True
+            use_fast=True,
+            add_prefix_space=True if hf_tokenizer_name_or_path == 'roberta-base' else False
         ),
         datasets_config=dict(
             max_seq_length=config.max_seq_length

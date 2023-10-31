@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch import nn
-from transformers.models.bert import BertPreTrainedModel, BertModel
+from transformers.modeling_bert import BertPreTrainedModel, BertModel
 from torchcrf import CRF
 from torch.nn import CrossEntropyLoss
 

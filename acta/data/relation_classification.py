@@ -84,7 +84,11 @@ class RelationClassificationDataset(BaseDataset):
                       label_prefix: str = '__label__',
                       **kwargs):
         with open(path_to_dataset, 'rt') as fh:
-            csv_reader = csv.reader(fh, delimiter=delimiter, quotechar=quotechar)
+            if delimiter == '\t':
+                # Don't quote for the case of TSV files
+                csv_reader = csv.reader(fh, delimiter=delimiter, quoting=csv.QUOTE_NONE)
+            else:
+                csv_reader = csv.reader(fh, delimiter=delimiter, quotechar=quotechar)
             dataset = list(csv_reader)
 
         self.dataset = [

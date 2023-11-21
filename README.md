@@ -50,13 +50,17 @@ evaluating models. You can check the available options running:
 
 Here is the list of options:
 
-    usage: run_acta.py [-h] --input-dir INPUT_DIR --output-dir OUTPUT_DIR
-                    --task-type {rel-class,seq-tag} --model MODEL
-                    [--config CONFIG] [--tokenizer TOKENIZER]
+    usage: run_acta.py [-h] [--input-dir INPUT_DIR] [--train-data TRAIN_DATA]
+                    [--test-data TEST_DATA] [--validation-data VALIDATION_DATA]
+                    --output-dir OUTPUT_DIR --task-type {rel-class,seq-tag}
+                    --model MODEL [--config CONFIG] [--tokenizer TOKENIZER]
                     [--cache-dir CACHE_DIR] [--checkpoint-path CHECKPOINT_PATH]
+                    [--timestamp-checkpoints]
                     [--load-from-checkpoint LOAD_FROM_CHECKPOINT]
                     [--logging-dir LOGGING_DIR] [--train]
                     [--evaluation-split {train,test,validation}] [--validation]
+                    [--labels [LABELS ...]]
+                    [--relevant-labels [RELEVANT_LABELS ...]]
                     [--accelerator ACCELERATOR] [--num-devices NUM_DEVICES]
                     [--num-workers NUM_WORKERS] [--epochs EPOCHS]
                     [--early-stopping EARLY_STOPPING] [--max-steps MAX_STEPS]
@@ -78,7 +82,18 @@ Here is the list of options:
     --input-dir INPUT_DIR
                             The input directory. It has the train, test and
                             validation (dev) files. Depending on the task they
-                            might be tsv or conll.
+                            might be tsv or conll. If given, the parameters
+                            `--train-data`, `--test-data` and `--validation-data`
+                            will be ignored.
+    --train-data TRAIN_DATA
+                            The train dataset path. It should already be in the
+                            format for the corresponding task (`--task-type`).
+    --test-data TEST_DATA
+                            The test dataset path. It should already be in the
+                            format for the corresponding task (`--task-type`).
+    --validation-data VALIDATION_DATA
+                            The validation dataset path. It should already be in
+                            the format for the corresponding task (`--task-type`).
     --output-dir OUTPUT_DIR
                             The output directory where the model predictions and
                             checkpoints will be stored.
@@ -101,6 +116,15 @@ Here is the list of options:
     --checkpoint-path CHECKPOINT_PATH
                             Name of directory (inside output-dir) to store the
                             checkpoint files.
+    --timestamp-checkpoints
+                            If active, it will create a directory under
+                            `--checkpoint-path` with a timestamp to store the
+                            checkpoints (this is to avoid checkpoint overwriting
+                            when running multiple experiments in parallel).
+                            Warning: This is only valid in training mode. If you
+                            want to evaluate existing checkpoint inside a
+                            directory with timestamp you need to provide the path
+                            to the checkpoints directory in full.
     --load-from-checkpoint LOAD_FROM_CHECKPOINT
                             Path to a checkpoint file to continue training.
     --logging-dir LOGGING_DIR
@@ -114,6 +138,15 @@ Here is the list of options:
     --validation          If active, runs validation after `--log-every-n-steps`
                             steps. Validation is useful for early stopping of the
                             training process.
+    --labels [LABELS ...]
+                            The list of labels (separated by spaces) for the task.
+                            If not given it will fallback to the default labels
+                            for the task.
+    --relevant-labels [RELEVANT_LABELS ...]
+                            The list of relevant labels for the task, so it will
+                            calculate the metrics with these relevant labels in
+                            consideration. If not given it will fall back to the
+                            relevant labels for the task.
     --accelerator ACCELERATOR
                             What device to use as accelerator (cpu, gpu, tpu,
                             etc).

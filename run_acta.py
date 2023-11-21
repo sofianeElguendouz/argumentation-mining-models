@@ -491,12 +491,27 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    # Required parameters
+    # Alternative Parameters (if the first is given, the rest are ignored)
     parser.add_argument("--input-dir",
-                        required=True,
                         type=Path,
                         help="The input directory. It has the train, test and validation (dev) "
-                             "files. Depending on the task they might be tsv or conll.")
+                             "files. Depending on the task they might be tsv or conll. "
+                             "If given, the parameters `--train-data`, `--test-data` and "
+                             "`--validation-data` will be ignored.")
+    parser.add_argument("--train-data",
+                        type=Path,
+                        help="The train dataset path. It should already be in the format "
+                             "for the corresponding task (`--task-type`).")
+    parser.add_argument("--test-data",
+                        type=Path,
+                        help="The test dataset path. It should already be in the format "
+                             "for the corresponding task (`--task-type`).")
+    parser.add_argument("--validation-data",
+                        type=Path,
+                        help="The validation dataset path. It should already be in the format "
+                             "for the corresponding task (`--task-type`).")
+
+    # Required parameters
     parser.add_argument("--output-dir",
                         required=True,
                         type=Path,
@@ -679,7 +694,17 @@ if __name__ == "__main__":
                      f"{', '.join(MODELS.keys())}; and is not an existing file.")
         sys.exit()
 
-    data_splits = get_data_splits(config.input_dir, config.task_type)
+    if config.input_dir is not None:
+        data_splits = get_data_splits(config.input_dir, config.task_type)
+    else:
+        data_splits = {}
+        if config.train_data is not None:
+            data_splits['train'] = config.train_data
+        if config.test_data is not None:
+            data_splits['test'] = config.test_data
+        if config.validation_data is not None:
+            data_splits['validation'] = config.validation_data
+
     if not data_splits:
         logger.error("There are no files to train nor evaluate. Exiting the trainer.")
         sys.exit(1)

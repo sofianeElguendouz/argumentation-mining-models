@@ -35,10 +35,39 @@ Requirements
     internal development of the module to run it on our hardware, its not
     guaranteed to run in yours.
 - The code is heavily dependent on the following libraries:
+  - [PyTorch](https://pytorch.org) >= 2: Developed with 2.0.1
   - [Lightning](https://lightning.ai/) >= 2: Developed with 2.0.9
   - [Hugging Face](https://huggingface.co/) >= 4: Developed with 4.33.2
   - [Pytorch-CRF](https://pytorch-crf.readthedocs.io/en/stable/): Developed with
     0.7.2
+
+Installation
+------------
+
+Starting from version 0.1.2, the acta module is installable as a Python package.
+To do so, we recommend use some form of virtual environment first:
+
+    $ python -m venv acta-venv
+    $ source ./acta-venv/bin/activate
+    (acta-venv) $ pip install --upgrade pip
+
+Before installing the ACTA Module package, we recommend you to install your preferred
+PyTorch version, for example, if you are running this from a machine without GPU access,
+it's recommended to install PyTorch like:
+
+    (acta-venv) $ pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cpu
+
+If you don't explicitly install the version of PyTorch you'd like it's probably
+that `pip` will try to install the default version for your system when resolving
+the dependencies (e.g. for Linux it's the GPU version).
+
+After that, you can install the ACTA module:
+
+    (acta-venv) $ pip install git+https://gitlab.com/wimmics-antidote/antidote-acta@acta-module-<VERSION>
+
+Replacing `<VERSION>` with the version you want to install (>= 0.1.2). E.g.:
+
+    (acta-venv) $ pip install git+https://gitlab.com/wimmics-antidote/antidote-acta@acta-module-0.1.2
 
 Usage
 -----

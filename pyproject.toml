@@ -23,7 +23,8 @@ Homepage = "https://gitlab.com/wimmics-antidote/antidote-acta"
 Issues = "https://gitlab.com/wimmics-antidote/antidote-acta/-/issues"
 
 [tool.setuptools.packages.find]
-include = ["acta"]
+include = ["acta*"]
+exclude = ["*venv*", "*env*"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

@@ -135,7 +135,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         The split to use for evaluation. If given, it must be one of {'train',
         'test', 'validation'}.
     num_workers: int
-        Number of workers to use. If < 0 uses all cpus.
+        Number of workers to use. If < 0 uses all CPUs.
     """
 
     def __init__(self,
@@ -186,7 +186,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
     @abstractmethod
     def LABELS(cls) -> List[str]:
         """
-        This should be overriden by the subclasses (as a class attribute),
+        This should be overridden by the subclasses (as a class attribute),
         otherwise it will fail when trying to instantiate in the `__init__`
         method if no `labels` attribute is given.
         """
@@ -194,7 +194,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
     @property
     def labels(self) -> Dict[str, int]:
         """
-        Property that displays the map betwenn labels and ids for the Datasets.
+        Property that displays the map between labels and ids for the Datasets.
 
         Returns
         -------

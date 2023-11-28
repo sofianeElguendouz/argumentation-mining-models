@@ -34,7 +34,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     It adds a Bidirectional Recurrent Neural Network (a GRU in this case) with a
     Linear Projection and uses Pytorch CRF for the loss for Sequence Tagging.
 
-    This model was presentend in the work of Mayer, Cabrio and Villata:
+    This model was presented in the work of Mayer, Cabrio and Villata:
     "Transformer-based Argument Mining for Healthcare Applications" presented in
     ECAI 2020. For more information check: https://hal.science/hal-02879293/
 

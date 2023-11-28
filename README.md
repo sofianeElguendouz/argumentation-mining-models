@@ -21,7 +21,7 @@ It has implementations for training two kinds of tasks:
 This repository was forked from the [original work by Tobias
 Mayer](https://gitlab.com/tomaye/ecai2020-transformer_based_am). His original
 code is available at [`./archive`](./archive). We updated it so it was able to
-handle the latests [Hugging Face models](https://huggingface.co/models)
+handle the latest [Hugging Face models](https://huggingface.co/models)
 available.
 
 Requirements

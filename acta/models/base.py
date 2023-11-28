@@ -31,7 +31,7 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     Abstract Base Class for a Transformer Module.
 
     For more information check the LightningModule documentation and the
-    tutorial on finetuning Hugging Face Transfomers with Pytorch Lightning:
+    tutorial on finetuning Hugging Face Transformers with Pytorch Lightning:
     - https://lightning.ai/docs/pytorch/stable/common/lightning_module.html
     - https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/text-transformers.html
 

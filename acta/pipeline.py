@@ -26,9 +26,83 @@ from typing import Dict, List, Optional, Union, TYPE_CHECKING
 if TYPE_CHECKING:
     # Only import this modules if needed for type checking
     # This is required to follow pep8 on type hinting and annotations
-    from acta.models import SequenceTaggingTransformerModule
+    from acta.models import RelationClassificationTransformerModule, \
+        SequenceTaggingTransformerModule
 
 logger = logging.getLogger(__name__)
+
+
+def relation_classification(text: List[str],
+                            text_pair: List[str],
+                            model: "RelationClassificationTransformerModule",
+                            tokenizer: Optional[Union[str, AutoTokenizer]] = None,
+                            id2label: Optional[Dict[int, str]] = None,
+                            max_seq_lenght: Optional[int] = None,
+                            truncation_strategy: Optional[Union[str, bool]] = False) -> List[str]:
+    """
+    Function to do relationship classification between pairs of argumentation
+    components. The components should already have been obtained from a previous
+    iteration (i.e. this function doesn't detect components nor does any kind of
+    sequence tagging, for that refer to the `sequence_tagging` function). It also
+    doesn't make any assumptions on the input text.
+
+    Parameters
+    ----------
+    text: List[str]
+        A list with the sentences in the first group (after the [CLS] but before
+        the first [SEP]).
+    text_pair: List[str]
+        A list with the sentences in the second group (between the first [SEP]
+        and the final [SEP]). It is expected that text_pair[i] is the sentence
+        corresponding to text[i] since the relation classification will be done
+        with that assumption.
+    model: RelationClassificationTransformerModule
+        The model to run the classification. It might be as well any model that
+        conforms with HF AutoModelForSequenceClassification.
+    tokenizer: str | AutoTokenizer, optional
+        The tokenizer to process the data (either as a string matching to some
+        tokenizer in Hugging Face hub) or as a pre-trained tokenizer. If it's
+        not given it will use the fast tokenizer that is associated by default
+        to the model.
+    id2label: Dict[int, str], optional
+        The mapping between labels ids and final labels in the 'BIO' format. It
+        is important that it is in that format since the heuristics will work
+        only with that format. If not given it will try to get it from the
+        model, assuming the model is actually a
+        RelationClassificationTransformerModule.
+    max_seq_length: int, optional
+        If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
+    truncation_strategy: str|bool, optional
+        What truncation strategy to use. Must be one of `longest_first` (or
+        True), `only_second`, `only_first` or 'do_not_truncate' (or False).
+        Check https://huggingface.co/docs/transformers/pad_truncation for more
+        information.
+
+    Returns
+    -------
+    List[str]
+        The list of labels indicating the relation type.
+    """
+    if tokenizer is None:
+        # When tokenizer is missing, use the model tokenizer with a warning
+        logger.warning("There was no tokenizer information given, defaulting "
+                       "to the tokenizer with the same name of the model: "
+                       f"{model.config.name_or_path}")
+        tokenizer = AutoTokenizer.from_pretrained(model.config.name_or_path, use_fast=True)
+    elif isinstance(tokenizer, str):
+        logger.info(f"Loading tokenizer: {tokenizer}")
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer, use_fast=True)
+
+    if id2label is None:
+        logger.warning("The `id2label` is taken from the model configuration.")
+        id2label = model.config.id2label
+
+    tokenized_components = tokenizer(text=text, text_pair=text_pair, padding=True,
+                                     max_length=max_seq_lenght, truncation=truncation_strategy,
+                                     return_tensors='pt')
+    predictions = model(**tokenized_components).logits.argmax(1).tolist()
+
+    return [id2label[pred] for pred in predictions]
 
 
 def _sentence_annotation(tokens: List[int],
@@ -192,13 +266,6 @@ def sequence_tagging(text: str,
         only with that format. If not given it will try to get it from the
         model, assuming the model is actually a
         SequenceTaggingTransformerModule.
-    max_seq_length: int, optional
-        If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
-    truncation_strategy: str
-        What truncation strategy to use (by default truncates the longest
-        sentence). Must be one of `longest_first`, `only_second`, `only_first`.
-        Check https://huggingface.co/docs/transformers/pad_truncation for more
-        information.
 
     Returns
     -------
@@ -225,7 +292,8 @@ def sequence_tagging(text: str,
         logger.warning("The `id2label` is taken from the model configuration.")
         id2label = model.config.id2label
 
-    # Any label that is not part of the BIO tags, will default to O
+    # Any label that is not part of the BIO tags, will default to O. This is to
+    # avoid problem with 'PAD' or 'X' tags (i.e. for padding and extensions)
     id2label = defaultdict(
         lambda: 'O',
         {idx: lbl for idx, lbl in id2label.items() if lbl[0] in 'BIO'}

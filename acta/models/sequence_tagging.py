@@ -53,7 +53,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     masked_label_id: Optional[int]
         If given number (defaults to None), it masks the given label id in the
         CRF function.  This can fail if the given `masked_label_id` is present
-        at the beggining of the sequence (e.g. if the special tokens for a
+        at the beginning of the sequence (e.g. if the special tokens for a
         transformer are not given the extension label but rather use the same
         'PAD' label that you are trying to mask).
     learning_rate: float

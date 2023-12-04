@@ -69,6 +69,13 @@ Replacing `<VERSION>` with the version you want to install (>= 0.1.2). E.g.:
 
     (acta-venv) $ pip install git+https://gitlab.com/wimmics-antidote/antidote-acta@acta-module-0.1.2
 
+### Pipeline
+
+The `acta.pipeline` module requires NLTK's PUNKT tokenizer. In order to install it run the
+following command:
+
+    (acta-venv) $ python -m nltk.downloader punkt
+
 Usage
 -----
 

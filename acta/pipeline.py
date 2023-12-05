@@ -21,7 +21,7 @@ import logging
 from collections import defaultdict
 from nltk.tokenize import sent_tokenize
 from transformers import AutoTokenizer
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     # Only import this modules if needed for type checking
@@ -221,7 +221,8 @@ def _sentence_annotation(tokens: List[int],
 def sequence_tagging(text: str,
                      model: "SequenceTaggingTransformerModule",
                      tokenizer: Optional[Union[str, AutoTokenizer]] = None,
-                     id2label: Optional[Dict[int, str]] = None) -> List[Dict[str, str]]:
+                     id2label: Optional[Dict[int, str]] = None) \
+                        -> Tuple[List[Dict[str, str]], List[int]]:
     """
     Function to do token classification annotation. The function expects a text
     and a SequenceTaggingTransformerModule (already trained) and based on the
@@ -269,14 +270,19 @@ def sequence_tagging(text: str,
 
     Returns
     -------
-    List[Dict[str, str]]
-        A list of dictionaries with the aggregated annotations. It has one
-        dictionary per group of annotations and it follows the order encountered
-        in the original text. Each dictionary is comprised of 2 elements:
+    Tuple[List[Dict[str, str]], List[int]]
+        The returned value is a tuple where:
+        - The first is a list of dictionaries with the aggregated annotations. It
+          has one dictionary per group of annotations and it follows the order
+          encountered in the original text. Each dictionary is comprised of 2
+          elements:
             - The 'label': A string with the label of the annotated group
               (without the 'B-'/'I-' prepends, it aggregates them)
             - The 'text': The text of the annotated group (as processed and
               decoded by the tokenizer).
+        - The second is a list with the indices of the relevant annotations,
+          i.e. the indices to those annotations with a label that is different
+          from the 'O' label.
     """
     if tokenizer is None:
         # When tokenizer is missing, use the model tokenizer with a warning
@@ -321,4 +327,6 @@ def sequence_tagging(text: str,
         )
         annotations.extend(sentence_annotations)
 
-    return annotations
+    relevant = [idx for idx, annotation in enumerate(annotations) if annotation['label'] != 'O']
+
+    return annotations, relevant

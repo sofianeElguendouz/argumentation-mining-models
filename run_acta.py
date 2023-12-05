@@ -1,5 +1,5 @@
 """
-Trainer script for the ACTA modules.
+Trainer/evaluation script for the ACTA modules.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 

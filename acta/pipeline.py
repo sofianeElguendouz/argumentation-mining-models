@@ -38,7 +38,7 @@ def relation_classification(text: List[str],
                             tokenizer: Optional[Union[str, AutoTokenizer]] = None,
                             id2label: Optional[Dict[int, str]] = None,
                             max_seq_lenght: Optional[int] = None,
-                            truncation_strategy: Optional[Union[str, bool]] = False) -> List[str]:
+                            truncation_strategy: str = 'do_not_truncate') -> List[str]:
     """
     Function to do relationship classification between pairs of argumentation
     components. The components should already have been obtained from a previous
@@ -72,9 +72,9 @@ def relation_classification(text: List[str],
         RelationClassificationTransformerModule.
     max_seq_length: int, optional
         If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
-    truncation_strategy: str|bool, optional
-        What truncation strategy to use. Must be one of `longest_first` (or
-        True), `only_second`, `only_first` or 'do_not_truncate' (or False).
+    truncation_strategy: str
+        What truncation strategy to use. Must be one of `longest_first`,
+        `only_second`, `only_first` or `do_not_truncate`.
         Check https://huggingface.co/docs/transformers/pad_truncation for more
         information.
 
@@ -221,7 +221,9 @@ def _sentence_annotation(tokens: List[int],
 def sequence_tagging(text: str,
                      model: "SequenceTaggingTransformerModule",
                      tokenizer: Optional[Union[str, AutoTokenizer]] = None,
-                     id2label: Optional[Dict[int, str]] = None) \
+                     id2label: Optional[Dict[int, str]] = None,
+                     max_seq_lenght: Optional[int] = None,
+                     truncation_strategy: str = 'do_not_truncate') \
                         -> Tuple[List[Dict[str, str]], List[int]]:
     """
     Function to do token classification annotation. The function expects a text
@@ -267,6 +269,13 @@ def sequence_tagging(text: str,
         only with that format. If not given it will try to get it from the
         model, assuming the model is actually a
         SequenceTaggingTransformerModule.
+    max_seq_length: int, optional
+        If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
+    truncation_strategy: str
+        What truncation strategy to use. Must be one of `longest_first`,
+        `only_second`, `only_first` or `do_not_truncate`.
+        Check https://huggingface.co/docs/transformers/pad_truncation for more
+        information.
 
     Returns
     -------
@@ -307,6 +316,7 @@ def sequence_tagging(text: str,
 
     sentences = sent_tokenize(text)
     tokenized_text = tokenizer(sentences, padding=True, return_tensors='pt',
+                               max_length=max_seq_lenght, truncation=truncation_strategy,
                                return_special_tokens_mask=True)
     special_tokens_mask = tokenized_text.pop('special_tokens_mask')
     predictions = model(**tokenized_text)

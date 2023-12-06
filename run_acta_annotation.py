@@ -87,6 +87,20 @@ if __name__ == "__main__":
                                   type=Path,
                                   help="Path to the `RelationClassificationTransformerModule`, "
                                        "trained for Argumentative Relationship Classification.")
+    rel_class_parser.add_argument("--filter-no-rel-class",
+                                  action="store_true",
+                                  help="If active removes the 'No Relationship' predictions from "
+                                       "the final annotations.")
+    rel_class_parser.add_argument("--no-rel-class",
+                                  default="noRel",
+                                  help="The class that defines that there's no relationship.")
+    rel_class_parser.add_argument("--confidence",
+                                  action="store_true",
+                                  help="If active, adds confidence to the argumentative structure "
+                                       "predictions.")
+    rel_class_parser.add_argument("--confidence-as-probability",
+                                  action="store_true",
+                                  help="If active, the confidence is the probability.")
 
     args = parser.parse_args()
 
@@ -103,7 +117,7 @@ if __name__ == "__main__":
         annotations = {}
 
     with open(args.input_file, "rt") as fh:
-        input_text = fh.read()
+        input_text = ' '.join(fh.read().split())  # Remove double whitespaces and newlines
 
     if args.pipeline in {'arg', 'rel'}:
         logger.info("Loading argumentative components detection model.")
@@ -156,20 +170,24 @@ if __name__ == "__main__":
             tokenizer=rel_class_model.config.name_or_path,
             id2label=rel_class_model.config.id2label,
             max_seq_lenght=args.max_seq_length,
-            truncation_strategy=args.truncation_strategy
+            truncation_strategy=args.truncation_strategy,
+            return_confidence=args.confidence,
+            confidence_as_probability=args.confidence_as_probability
         )
 
-        # FIXME: Is the "confidence" necessary?
-        # FIXME: Change the 'noRel' to something configurable
-        annotations['argumentative_structure'] = [
-            {
+        argumentative_structure = []
+        for source, target, relation in zip(source_components, target_components, rel_classes):
+            if args.filter_no_rel_class and relation == args.no_rel_class:
+                continue
+            annotation = {
                 'source': source['id'],
                 'target': target['id'],
-                'relation': relation
+                'relation': relation['label']
             }
-            for source, target, relation in zip(source_components, target_components, rel_classes)
-            if relation != 'noRel'
-        ]
+            if args.confidence:
+                annotation['confidence'] = relation['confidence']
+            argumentative_structure.append(annotation)
+        annotations['argumentative_structure'] = argumentative_structure
 
     logger.info(f"Saving annotated file to: {args.output_file}")
     with open(args.output_file, "wt") as fh:

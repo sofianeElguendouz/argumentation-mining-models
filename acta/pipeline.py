@@ -20,6 +20,7 @@ import logging
 
 from collections import defaultdict
 from nltk.tokenize import sent_tokenize
+from torch import softmax
 from transformers import AutoTokenizer
 from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
@@ -38,7 +39,10 @@ def relation_classification(text: List[str],
                             tokenizer: Optional[Union[str, AutoTokenizer]] = None,
                             id2label: Optional[Dict[int, str]] = None,
                             max_seq_lenght: Optional[int] = None,
-                            truncation_strategy: str = 'do_not_truncate') -> List[str]:
+                            truncation_strategy: str = 'do_not_truncate',
+                            return_confidence: bool = False,
+                            confidence_as_probability: bool = False) \
+                                -> List[Dict[str, Union[str, float]]]:
     """
     Function to do relationship classification between pairs of argumentation
     components. The components should already have been obtained from a previous
@@ -77,11 +81,22 @@ def relation_classification(text: List[str],
         `only_second`, `only_first` or `do_not_truncate`.
         Check https://huggingface.co/docs/transformers/pad_truncation for more
         information.
+    return_confidence: bool
+        If True, return confidence (logits) alongside predictions.
+    confidence_as_probability: bool
+        If True, transforms the confidence in probability with a SoftMax
+        function.
 
     Returns
     -------
-    List[str]
-        The list of labels indicating the relation type.
+    List[Dict[str, str | float]]
+        A list with dictionary with the prediction for each pair of elements
+        given by parameter. Each dictionary has the following elements:
+            - The 'label': The label (mapped from id2label) of the prediction.
+            - The 'confidence': This is optional (depends on
+              `return_confidence`) and it can be either the logit score of the
+              prediction or the probability (if `confidence_as_probability` is
+              True).
     """
     if tokenizer is None:
         # When tokenizer is missing, use the model tokenizer with a warning
@@ -100,9 +115,23 @@ def relation_classification(text: List[str],
     tokenized_components = tokenizer(text=text, text_pair=text_pair, padding=True,
                                      max_length=max_seq_lenght, truncation=truncation_strategy,
                                      return_tensors='pt')
-    predictions = model(**tokenized_components).logits.argmax(1).tolist()
+    scores = model(**tokenized_components).logits
+    if confidence_as_probability:
+        scores = softmax(scores, 1)
+    confidence = scores.max(1).values.tolist()
+    predictions = scores.argmax(1).tolist()
 
-    return [id2label[pred] for pred in predictions]
+    if return_confidence:
+        return [
+            {
+                'label': id2label[prediction],
+                'confidence': confidence
+            } for prediction, confidence in zip(predictions, confidence)
+        ]
+    else:
+        return [
+            {'label': id2label[prediction]} for prediction in predictions
+        ]
 
 
 def _sentence_annotation(tokens: List[int],

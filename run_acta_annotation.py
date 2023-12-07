@@ -140,11 +140,11 @@ if __name__ == "__main__":
         # From the list of relevant argumentative components we build a list of
         # nodes with ids that start from 0 and the reference being the index in
         # the full list of annotations, in this way we avoid redundancy of data
-        arg_comp = [{'id': idx, 'ref': ref} for idx, ref in enumerate(arg_comp_relevant)]
+        arg_comp_relevant = [{'id': idx, 'ref': ref} for idx, ref in enumerate(arg_comp_relevant)]
 
         annotations['argumentative_components'] = {
-            'full': arg_comp_annotations,
-            'relevant': arg_comp
+            'annotations': arg_comp_annotations,
+            'relevant': arg_comp_relevant
         }
 
     if args.pipeline == 'rel':
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         # the permutations of 2 components of all the relevant components
         source_components = []
         target_components = []
-        for src, tgt in permutations(arg_comp, 2):
+        for src, tgt in permutations(arg_comp_relevant, 2):
             source_components.append(src)
             target_components.append(tgt)
 
@@ -175,19 +175,19 @@ if __name__ == "__main__":
             confidence_as_probability=args.confidence_as_probability
         )
 
-        argumentative_structure = []
+        relations_predictions = []
         for source, target, relation in zip(source_components, target_components, rel_classes):
             if args.filter_no_rel_class and relation == args.no_rel_class:
                 continue
-            annotation = {
+            relation_annotation = {
                 'source': source['id'],
                 'target': target['id'],
                 'relation': relation['label']
             }
             if args.confidence:
-                annotation['confidence'] = relation['confidence']
-            argumentative_structure.append(annotation)
-        annotations['argumentative_structure'] = argumentative_structure
+                relation_annotation['confidence'] = relation['confidence']
+            relations_predictions.append(relation_annotation)
+        annotations['argumentative_structure'] = relations_predictions
 
     logger.info(f"Saving annotated file to: {args.output_file}")
     with open(args.output_file, "wt") as fh:

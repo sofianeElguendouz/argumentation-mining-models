@@ -76,6 +76,7 @@ def relation_classification(text: List[str],
         RelationClassificationTransformerModule.
     max_seq_length: int, optional
         If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
+        Only makes sense if `truncation_strategy` != 'do_not_truncate'.
     truncation_strategy: str
         What truncation strategy to use. Must be one of `longest_first`,
         `only_second`, `only_first` or `do_not_truncate`.
@@ -300,6 +301,7 @@ def sequence_tagging(text: str,
         SequenceTaggingTransformerModule.
     max_seq_length: int, optional
         If > 0 truncates and pads each sequence of the dataset to `max_seq_length`.
+        Only makes sense if `truncation_strategy` != 'do_not_truncate'.
     truncation_strategy: str
         What truncation strategy to use. Must be one of `longest_first`,
         `only_second`, `only_first` or `do_not_truncate`.

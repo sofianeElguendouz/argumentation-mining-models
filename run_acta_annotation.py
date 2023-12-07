@@ -133,7 +133,7 @@ if __name__ == "__main__":
             model=arg_comp_model,
             tokenizer=arg_comp_model.config.name_or_path,
             id2label=arg_comp_model.config.id2label,
-            max_seq_lenght=args.max_seq_length,
+            max_seq_length=args.max_seq_length,
             truncation_strategy=args.truncation_strategy
         )
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             model=rel_class_model,
             tokenizer=rel_class_model.config.name_or_path,
             id2label=rel_class_model.config.id2label,
-            max_seq_lenght=args.max_seq_length,
+            max_seq_length=args.max_seq_length,
             truncation_strategy=args.truncation_strategy,
             return_confidence=args.confidence,
             confidence_as_probability=args.confidence_as_probability

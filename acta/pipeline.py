@@ -38,7 +38,7 @@ def relation_classification(text: List[str],
                             model: "RelationClassificationTransformerModule",
                             tokenizer: Optional[Union[str, AutoTokenizer]] = None,
                             id2label: Optional[Dict[int, str]] = None,
-                            max_seq_lenght: Optional[int] = None,
+                            max_seq_length: Optional[int] = None,
                             truncation_strategy: str = 'do_not_truncate',
                             return_confidence: bool = False,
                             confidence_as_probability: bool = False) \
@@ -113,7 +113,7 @@ def relation_classification(text: List[str],
         id2label = model.config.id2label
 
     tokenized_components = tokenizer(text=text, text_pair=text_pair, padding=True,
-                                     max_length=max_seq_lenght, truncation=truncation_strategy,
+                                     max_length=max_seq_length, truncation=truncation_strategy,
                                      return_tensors='pt')
     scores = model(**tokenized_components).logits
     if confidence_as_probability:
@@ -251,7 +251,7 @@ def sequence_tagging(text: str,
                      model: "SequenceTaggingTransformerModule",
                      tokenizer: Optional[Union[str, AutoTokenizer]] = None,
                      id2label: Optional[Dict[int, str]] = None,
-                     max_seq_lenght: Optional[int] = None,
+                     max_seq_length: Optional[int] = None,
                      truncation_strategy: str = 'do_not_truncate') \
                         -> Tuple[List[Dict[str, str]], List[int]]:
     """
@@ -345,7 +345,7 @@ def sequence_tagging(text: str,
 
     sentences = sent_tokenize(text)
     tokenized_text = tokenizer(sentences, padding=True, return_tensors='pt',
-                               max_length=max_seq_lenght, truncation=truncation_strategy,
+                               max_length=max_seq_length, truncation=truncation_strategy,
                                return_special_tokens_mask=True)
     special_tokens_mask = tokenized_text.pop('special_tokens_mask')
     predictions = model(**tokenized_text)

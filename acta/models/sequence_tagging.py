@@ -18,6 +18,7 @@ Sequence Tagging Transformer Module for Token Classification in Argumentation Mi
 
 import torch
 import torch.nn as nn
+import warnings
 
 from torchcrf import CRF
 from transformers import AutoModel
@@ -106,7 +107,10 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         outputs = self.model(**inputs)
         rnn_out, _ = self.rnn(outputs[0])
         emissions = self.linear(rnn_out)
-        path = torch.LongTensor(self.crf.decode(emissions))
+        with warnings.catch_warnings():
+            # Catch deprecation warning from pytorch-crf
+            warnings.simplefilter('ignore', category=UserWarning)
+            path = torch.LongTensor(self.crf.decode(emissions))
 
         return path, emissions
 
@@ -118,7 +122,11 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         else:
             mask = None
 
-        return -self.crf(emissions, labels, mask=mask)
+        with warnings.catch_warnings():
+            # Catch deprecation warning from pytorch-crf
+            warnings.simplefilter('ignore', category=UserWarning)
+            loss = -self.crf(emissions, labels, mask=mask)
+        return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         labels = batch.pop('labels', None)

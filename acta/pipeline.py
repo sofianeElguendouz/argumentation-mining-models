@@ -19,6 +19,7 @@ The pipeline module hold different functions to run a full annotation pipeline.
 import logging
 
 from collections import defaultdict
+from itertools import groupby
 from nltk.tokenize import sent_tokenize
 from torch import softmax
 from transformers import AutoTokenizer
@@ -368,6 +369,24 @@ def sequence_tagging(text: str,
         )
         annotations.extend(sentence_annotations)
 
-    relevant = [idx for idx, annotation in enumerate(annotations) if annotation['label'] != 'O']
+    # As a final step, to avoid having lots of irrelevant elements, we group all
+    # annotations that have the 'O' label and are contiguous. This is only for
+    # the 'O' label since contiguous relevant labels can be very well different
+    # elements.
+    grouped_annotations = []
+    for label, label_group in groupby(annotations, key=lambda ann: ann['label']):
+        if label == 'O':
+            # We aggregate the contiguous 'O' annotations
+            grouped_annotations.append({
+                'label': label,
+                'text': ' '.join([ann['text'].strip() for ann in label_group])
+            })
+        else:
+            # We leave the rest as is
+            grouped_annotations.extend(label_group)
 
-    return annotations, relevant
+    relevant = [
+        idx for idx, annotation in enumerate(grouped_annotations) if annotation['label'] != 'O'
+    ]
+
+    return grouped_annotations, relevant

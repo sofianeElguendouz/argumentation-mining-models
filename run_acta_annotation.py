@@ -67,40 +67,40 @@ if __name__ == "__main__":
                                   "Check https://huggingface.co/docs/transformers/pad_truncation "
                                   "for more information.")
 
-    arg_comp_parser = subparsers.add_parser("arg", parents=[base_parser],
+    arg_comp_parser = subparsers.add_parser("components", parents=[base_parser],
                                             help="Runs the Argumentative Components Detection "
                                                  "pipeline.")
-    arg_comp_parser.add_argument("--arg-comp-model", "-a",
+    arg_comp_parser.add_argument("--arg-comp-model", "-c",
                                  metavar="ARGUMENTATIVE_COMPONENTS_MODEL_PATH",
                                  required=True,
                                  type=Path,
-                                 help="Path to the `acta.models.SequenceTaggingTransformerModule`, "
+                                 help="Path to the `SequenceTaggingTransformerModule`, "
                                       "trained for Argumentative Components Detection.")
 
-    rel_class_parser = subparsers.add_parser("rel", parents=[arg_comp_parser],
-                                             add_help=False,
-                                             help="Runs the Argumentative Relationship "
-                                                  "Classification pipeline.")
-    rel_class_parser.add_argument("--rel-class-model", "-r",
-                                  metavar="RELATION_CLASSIFICATION_MODEL_PATH",
-                                  required=True,
-                                  type=Path,
-                                  help="Path to the `RelationClassificationTransformerModule`, "
-                                       "trained for Argumentative Relationship Classification.")
-    rel_class_parser.add_argument("--filter-no-rel-class",
-                                  action="store_true",
-                                  help="If active removes the 'No Relationship' predictions from "
-                                       "the final annotations.")
-    rel_class_parser.add_argument("--no-rel-class",
-                                  default="noRel",
-                                  help="The class that defines that there's no relationship.")
-    rel_class_parser.add_argument("--confidence",
-                                  action="store_true",
-                                  help="If active, adds confidence to the argumentative structure "
-                                       "predictions.")
-    rel_class_parser.add_argument("--confidence-as-probability",
-                                  action="store_true",
-                                  help="If active, the confidence is the probability.")
+    arg_struct_parser = subparsers.add_parser("structure", parents=[arg_comp_parser],
+                                              add_help=False,
+                                              help="Runs the Argumentative Structure "
+                                                   "Classification pipeline.")
+    arg_struct_parser.add_argument("--arg-struct-model", "-s",
+                                   metavar="ARGUMENTATIVE_STRUCTURE_MODEL_PATH",
+                                   required=True,
+                                   type=Path,
+                                   help="Path to the `RelationClassificationTransformerModule`, "
+                                        "trained for Argumentative Structure Classification.")
+    arg_struct_parser.add_argument("--filter-no-rel-class",
+                                   action="store_true",
+                                   help="If active removes the 'No Relationship' predictions from "
+                                        "the final annotations.")
+    arg_struct_parser.add_argument("--no-rel-class",
+                                   default="noRel",
+                                   help="The class that defines that there's no relationship.")
+    arg_struct_parser.add_argument("--confidence",
+                                   action="store_true",
+                                   help="If active, adds confidence to the argumentative structure "
+                                        "predictions.")
+    arg_struct_parser.add_argument("--confidence-as-probability",
+                                   action="store_true",
+                                   help="If active, the confidence is the probability.")
 
     args = parser.parse_args()
 
@@ -119,9 +119,10 @@ if __name__ == "__main__":
     with open(args.input_file, "rt") as fh:
         input_text = ' '.join(fh.read().split())  # Remove double whitespaces and newlines
 
-    if args.pipeline in {'arg', 'rel'}:
+    if args.pipeline in {'components', 'structure'}:
         logger.info("Loading argumentative components detection model.")
-        # Both for the commands of `arg` and `rel` we need to identify the argumentative components
+        # Both for the commands of `arg_comp` and `arg_struct` we need to
+        # identify the argumentative components
         arg_comp_model = SequenceTaggingTransformerModule.load_from_checkpoint(
             args.arg_comp_model
         )
@@ -147,10 +148,10 @@ if __name__ == "__main__":
             'relevant': arg_comp_relevant
         }
 
-    if args.pipeline == 'rel':
-        logger.info("Loading relation classification model.")
-        rel_class_model = RelationClassificationTransformerModule.load_from_checkpoint(
-            args.rel_class_model
+    if args.pipeline == 'structure':
+        logger.info("Loading argumentative structure model.")
+        arg_struct_model = RelationClassificationTransformerModule.load_from_checkpoint(
+            args.arg_struct_model
         )
 
         # Now that we have defined the argumentative components, we need to
@@ -162,13 +163,13 @@ if __name__ == "__main__":
             source_components.append(src)
             target_components.append(tgt)
 
-        logger.info("Classifying relations.")
+        logger.info("Classifying argumentative structure relations.")
         rel_classes = relation_classification(
             text=[arg_comp_annotations[comp['ref']]['text'] for comp in source_components],
             text_pair=[arg_comp_annotations[comp['ref']]['text'] for comp in target_components],
-            model=rel_class_model,
-            tokenizer=rel_class_model.config.name_or_path,
-            id2label=rel_class_model.config.id2label,
+            model=arg_struct_model,
+            tokenizer=arg_struct_model.config.name_or_path,
+            id2label=arg_struct_model.config.id2label,
             max_seq_length=args.max_seq_length,
             truncation_strategy=args.truncation_strategy,
             return_confidence=args.confidence,

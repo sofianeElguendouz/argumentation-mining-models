@@ -18,6 +18,7 @@ Sequence Tagging Transformer Module for Token Classification in Argumentation Mi
 
 import torch
 import torch.nn as nn
+import warnings
 
 from torchcrf import CRF
 from transformers import AutoModel
@@ -34,7 +35,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     It adds a Bidirectional Recurrent Neural Network (a GRU in this case) with a
     Linear Projection and uses Pytorch CRF for the loss for Sequence Tagging.
 
-    This model was presentend in the work of Mayer, Cabrio and Villata:
+    This model was presented in the work of Mayer, Cabrio and Villata:
     "Transformer-based Argument Mining for Healthcare Applications" presented in
     ECAI 2020. For more information check: https://hal.science/hal-02879293/
 
@@ -53,7 +54,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     masked_label_id: Optional[int]
         If given number (defaults to None), it masks the given label id in the
         CRF function.  This can fail if the given `masked_label_id` is present
-        at the beggining of the sequence (e.g. if the special tokens for a
+        at the beginning of the sequence (e.g. if the special tokens for a
         transformer are not given the extension label but rather use the same
         'PAD' label that you are trying to mask).
     learning_rate: float
@@ -106,7 +107,10 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         outputs = self.model(**inputs)
         rnn_out, _ = self.rnn(outputs[0])
         emissions = self.linear(rnn_out)
-        path = torch.LongTensor(self.crf.decode(emissions))
+        with warnings.catch_warnings():
+            # Catch deprecation warning from pytorch-crf
+            warnings.simplefilter('ignore', category=UserWarning)
+            path = torch.LongTensor(self.crf.decode(emissions))
 
         return path, emissions
 
@@ -118,7 +122,11 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         else:
             mask = None
 
-        return -self.crf(emissions, labels, mask=mask)
+        with warnings.catch_warnings():
+            # Catch deprecation warning from pytorch-crf
+            warnings.simplefilter('ignore', category=UserWarning)
+            loss = -self.crf(emissions, labels, mask=mask)
+        return loss
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         labels = batch.pop('labels', None)

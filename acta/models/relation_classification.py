@@ -1,5 +1,5 @@
 """
-Pytorch Lightning Module for Relation Classfication.
+Pytorch Lightning Module for Relation Classification.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 

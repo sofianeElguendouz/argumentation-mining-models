@@ -177,7 +177,7 @@ class TTYAwareProgressBar(TQDMProgressBar):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
         current = batch_idx + 1
-        # The following if checks if the stdout is not a tty (i.e. a termianal)
+        # The following if checks if the stdout is not a tty (i.e. a terminal)
         # and if it isn't and the time for refreshing was reached, then prints
         # the progress to the output (this is the same guard in case of test and
         # validation)

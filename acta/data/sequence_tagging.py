@@ -1,6 +1,6 @@
 """
 Sequence Tagging Datasets. It has the definitions of the
-`SequenceTaggingDataset` and the `SequenceTaggingaDataModule`.
+`SequenceTaggingDataset` and the `SequenceTaggingDataModule`.
 The Dataset reads CONLL based column format for Sequence Tagging (Token
 Classification).
 
@@ -313,7 +313,7 @@ class SequenceTaggingDataModule(BaseDataModule):
         labels are provided, it will add them as well.
 
         TODO (Issue #10): This method doesn't make any realignment of tokens and
-        labels, it doesn't regroup the subtokens and simply returns each
+        labels, it doesn't regroup the sub-tokens and simply returns each
         subtoken with the corresponding label of the subtoken. For the next
         iteration we need to address this.
 
@@ -333,7 +333,7 @@ class SequenceTaggingDataModule(BaseDataModule):
             Depending on the type of input, it can return the predictions of a
             single input (List[Tuple[str]]) or for a batch of inputs
             (List[List[Tuple[str]]]). The tuple has the form: (token,
-            predicted_label) or (token, predicte_label, true_label) if the true
+            predicted_label) or (token, predicted_label, true_label) if the true
             label is given.
         """
         if isinstance(input_ids[0], int):

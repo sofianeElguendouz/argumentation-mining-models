@@ -1,5 +1,5 @@
 """
-Trainer script for the ACTA modules.
+Trainer/evaluation script for the ACTA modules.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 
@@ -123,7 +123,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         check `acta.data.base.BaseDataModule` and it's children classes.
     model: LightningModule
         This is one of the possible Lightning Modules in `TASKS`, either for
-        relation classificaion or for sequence tagging. For more information
+        relation classification or for sequence tagging. For more information
         check `acta.models.base.BaseTransformerModule` and it's children classes.
     config: Namespace
         The Namespace configuration that is parsed from the command line via
@@ -346,7 +346,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
         check `acta.data.base.BaseDataModule` and it's children classes.
     model: LightningModule
         The model to be evaluated. Depending on the configuration it will
-        use this model or checkpointed weights of this model.
+        use this model or checkpoint weights of this model.
     config: Namespace
         The Namespace configuration that is parsed from the command line via
         argparse.
@@ -456,7 +456,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
             checkpoint_step = re.search(r"(?<=step=)\d+", checkpoint_file.name)
             checkpoint_step = int(checkpoint_step.group(0)) if checkpoint_step else None
             if last_checkpoint_step > 0 and checkpoint_step is None:
-                # Do not run unkown checkpoints when last_checkpoint_step is known
+                # Do not run unknown checkpoints when last_checkpoint_step is known
                 logger.warning(f"Ignoring {checkpoint_file} since it doesn't have a declared step.")
                 continue
             elif (checkpoint_step is not None and checkpoint_step < last_checkpoint_step) \

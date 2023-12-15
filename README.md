@@ -21,7 +21,7 @@ It has implementations for training two kinds of tasks:
 This repository was forked from the [original work by Tobias
 Mayer](https://gitlab.com/tomaye/ecai2020-transformer_based_am). His original
 code is available at [`./archive`](./archive). We updated it so it was able to
-handle the latests [Hugging Face models](https://huggingface.co/models)
+handle the latest [Hugging Face models](https://huggingface.co/models)
 available.
 
 Requirements
@@ -68,6 +68,13 @@ After that, you can install the ACTA module:
 Replacing `<VERSION>` with the version you want to install (>= 0.1.2). E.g.:
 
     (acta-venv) $ pip install git+https://gitlab.com/wimmics-antidote/antidote-acta@acta-module-0.1.2
+
+### Pipeline
+
+The `acta.pipeline` module requires NLTK's PUNKT tokenizer. In order to install it run the
+following command:
+
+    (acta-venv) $ python -m nltk.downloader punkt
 
 Usage
 -----

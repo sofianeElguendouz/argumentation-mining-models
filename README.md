@@ -238,3 +238,21 @@ Here is the list of options:
 
 We have a sample bash script with some common configurations in
 [`run_acta.sh`](./run_acta.sh) that you can check.
+
+### Multiple Devices Evaluation
+
+When training a model using multiple Non-CPU devices (e.g. GPUs), the strategy
+used by Pytorch Lightning is DistributedDataParallelism (or DDP), this means
+that the same process will be run multiple times (instead of spawning childs
+from a main process).
+
+In this scenario, training and evaluating during the same run will have
+unexpected behavior, since there can be race conditions when trying to write to
+the same results files. As such, we advice to avoid training and evaluating
+during the same process when having multiple Non-CPU devices. And in order to
+avoid any problems, after the training is finished, you should run the
+evaluation with a single device (check the `--num-devices` option in the
+`run_acta.py` script).
+
+For more information check
+[this Github Issue](https://github.com/Lightning-AI/pytorch-lightning/issues/8375).

@@ -530,8 +530,11 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation-split",
                         choices=["train", "test", "validation"],
                         help="The split to use for evaluation at the end of training "
-                             "(train, validation, test)."
-                             "If not given there won't be any evaluation done.")
+                             "(train, validation, test). "
+                             "If not given there won't be any evaluation done. "
+                             "WARNING: If training on multiple non CPU devices (e.g. GPU) it is "
+                             "strongly recommended to avoid evaluating during the same run, since "
+                             "that will result in unexpected behavior.")
     parser.add_argument("--validation",
                         action="store_true",
                         help="If active, runs validation after `--log-every-n-steps` steps. "

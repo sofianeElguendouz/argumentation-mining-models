@@ -42,7 +42,7 @@ python ./run_acta.py \
   --overwrite-output \
   --random-seed $RANDOM_SEED
 
-FINAL_CHECKPOINT=$(cat $OUTPUT/$CHECKPOINT_PATH/final_checkpoint_path.txt)
+FINAL_CHECKPOINT=$(cat $OUTPUT_DIR/$CHECKPOINT_PATH/final_checkpoint_path.txt)
 
 python ./run_acta.py \
   --input-dir $INPUT_DIR \
@@ -57,5 +57,6 @@ python ./run_acta.py \
   --num-workers $NUM_WORKERS \
   --eval-batch-size $BATCH_SIZE \
   --eval-all-checkpoints \
+  --max-seq-length $MAX_SEQ_LENGTH \
   --overwrite-output \
   --random-seed $RANDOM_SEED

@@ -17,9 +17,6 @@ ACTA library.
    limitations under the License.
 """
 
-import sys
-
-from lightning.pytorch.callbacks import TQDMProgressBar
 from sklearn.metrics import accuracy_score, f1_score
 from typing import Dict, List, Optional, Union
 
@@ -127,79 +124,3 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
         outputs = {f"{prefix}_{metric}": value for metric, value in outputs.items()}
 
     return outputs
-
-
-class TTYAwareProgressBar(TQDMProgressBar):
-    """
-    A Wrapper Callback around TQDMProgressBar that is TTY aware, thus using the
-    TQDM bar when possible or just printing to screen if not connected to a
-    terminal (thus avoiding problems with the `\r` applied by tqdm).
-
-    This class follows the same implementation as
-    `lightning.pytorch.callbacks.TQDMProgressBar`.
-
-    For documentation please check:
-    https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.callbacks.TQDMProgressBar.html
-    """
-    def init_predict_tqdm(self):
-        bar = super().init_predict_tqdm()
-        bar.disable = None  # Deactivates for non TTY
-        return bar
-
-    def init_test_tqdm(self):
-        bar = super().init_test_tqdm()
-        bar.disable = None  # Deactivates for non TTY
-        return bar
-
-    def init_train_tqdm(self):
-        bar = super().init_train_tqdm()
-        bar.disable = None  # Deactivates for non TTY
-        return bar
-
-    def init_validation_tqdm(self):
-        bar = super().init_validation_tqdm()
-        bar.disable = None  # Deactivates for non TTY
-        return bar
-
-    def _print_progress(self, stage: str, current_epoch: int, current_step: int,
-                        total_steps: int, loss: float):
-        """
-        Prints progress to the standard output.
-        """
-        percent = (current_step / total_steps) * 100
-        sys.stdout.write(
-            f"{stage.capitalize()} Epoch {current_epoch} - "
-            f"Step {current_step} of {total_steps} ({percent:.2f}%) - "
-            f"Loss: {loss:.4f}\n"
-        )
-        sys.stdout.flush()
-
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
-        current = batch_idx + 1
-        # The following if checks if the stdout is not a tty (i.e. a terminal)
-        # and if it isn't and the time for refreshing was reached, then prints
-        # the progress to the output (this is the same guard in case of test and
-        # validation)
-        if not sys.stdout.isatty() and \
-                (current % self.refresh_rate == 0 or current == self.train_progress_bar.total):
-            self._print_progress("Training", trainer.current_epoch, current,
-                                 self.train_progress_bar.total, outputs['loss'])
-
-    def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
-        super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
-        current = batch_idx + 1
-        if not sys.stdout.isatty() and \
-                (current % self.refresh_rate == 0 or current == self.test_progress_bar.total):
-            self._print_progress("Test", trainer.current_epoch, current,
-                                 self.test_progress_bar.total, outputs['test_loss'])
-
-    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx,
-                                dataloader_idx=0):
-        super().on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx,
-                                        dataloader_idx)
-        current = batch_idx + 1
-        if not sys.stdout.isatty() and \
-                (current % self.refresh_rate == 0 or current == self.val_progress_bar.total):
-            self._print_progress("Validation", trainer.current_epoch, current,
-                                 self.val_progress_bar.total, outputs['val_loss'])

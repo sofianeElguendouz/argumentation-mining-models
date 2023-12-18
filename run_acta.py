@@ -33,7 +33,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import compute_metrics, compute_seq_tag_labels_metrics, TTYAwareProgressBar
+from acta.utils import compute_metrics, compute_seq_tag_labels_metrics
 
 
 # Available models to train
@@ -156,9 +156,6 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         enable_version_counter=False  # Overwrite existing checkpoints
     )
     callbacks.append(model_checkpoints)
-
-    progress_bar = TTYAwareProgressBar(refresh_rate=config.log_every_n_steps)
-    callbacks.append(progress_bar)
 
     if config.early_stopping:
         early_stopping = EarlyStopping(

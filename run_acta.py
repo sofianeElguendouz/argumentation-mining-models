@@ -168,7 +168,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     trainer = pl.Trainer(
         accelerator=config.accelerator,
         devices=config.num_devices,
-        strategy='ddp',
+        strategy='auto',
         precision='16-mixed' if config.fp16 else '32-true',
         logger=model_logger,
         callbacks=callbacks,
@@ -776,5 +776,11 @@ if __name__ == "__main__":
         trainer, model_checkpoints = train_model(data_module, model, config)
 
     if config.evaluation_split:
+        if config.accelerator != 'cpu' and config.num_devices != 1:
+            logger.warning("Trying to evaluate a model with multiple non CPU devices. "
+                           "This will result in unexpected behaviour. "
+                           "A better option is to run a separate script for the evaluation with "
+                           "a single device.")
+
         evaluate_models(data_module, model, config, trainer if config.train else None,
                         model_checkpoints if config.train else None)

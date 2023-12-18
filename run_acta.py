@@ -196,6 +196,11 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     # Save a checkpoint for the last epoch and last step
     trainer.save_checkpoint(last_model_checkpoint)
 
+    if trainer.is_global_zero:
+        # For the main process we save an indicator to the last checkpoint
+        with open(f"{model_checkpoints.dirpath}/{model_name}_final.txt", "wt") as fh:
+            fh.write(last_model_checkpoint)
+
     return trainer, model_checkpoints
 
 

@@ -350,7 +350,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
         for the evaluation tasks.
     """
     # Create the results directory (should be unique)
-    os.makedirs(config.output_dir / 'results' / config.timestamp)
+    os.makedirs(config.output_dir / 'results' / config.timestamp, exist_ok=True)
     model_name = config.model if config.model in MODELS else os.path.basename(config.model)
     model_name = f"{model_name}_{config.task_type}"
 

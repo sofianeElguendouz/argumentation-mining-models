@@ -33,7 +33,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import compute_metrics, compute_seq_tag_labels_metrics, TTYAwareProgressBar
+from acta.utils import compute_metrics, compute_seq_tag_labels_metrics
 
 
 # Available models to train
@@ -157,9 +157,6 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     )
     callbacks.append(model_checkpoints)
 
-    progress_bar = TTYAwareProgressBar(refresh_rate=config.log_every_n_steps)
-    callbacks.append(progress_bar)
-
     if config.early_stopping:
         early_stopping = EarlyStopping(
             monitor='val_loss',
@@ -171,7 +168,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     trainer = pl.Trainer(
         accelerator=config.accelerator,
         devices=config.num_devices,
-        strategy='ddp_find_unused_parameters_true',
+        strategy='auto',
         precision='16-mixed' if config.fp16 else '32-true',
         logger=model_logger,
         callbacks=callbacks,
@@ -196,15 +193,13 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
         {"epoch": trainer.current_epoch, "step": trainer.global_step}
     ))
-    if not last_model_checkpoint.is_file():
-        # Save a checkpoint for the last epoch and last step
-        trainer.save_checkpoint(last_model_checkpoint)
-    # Create a link to the last model checkpoint (overwrite if necessary)
-    last_model_checkpoint_symlink = Path(f"{model_checkpoints.dirpath}/{model_name}_final.ckpt")
-    if last_model_checkpoint_symlink.exists():
-        logger.warning(f"Overriding link to last checkpoint to {last_model_checkpoint}")
-        os.unlink(last_model_checkpoint_symlink)
-    os.symlink(last_model_checkpoint, last_model_checkpoint_symlink)
+    # Save a checkpoint for the last epoch and last step
+    trainer.save_checkpoint(last_model_checkpoint)
+
+    if trainer.is_global_zero:
+        # For the main process we save an indicator to the last checkpoint
+        with open(f"{model_checkpoints.dirpath}/final_checkpoint_path.txt", "wt") as fh:
+            fh.write(last_model_checkpoint.absolute().as_posix())
 
     return trainer, model_checkpoints
 
@@ -335,8 +330,8 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
                     model_checkpoints: Optional[ModelCheckpoint] = None):
     """
     Evaluates the model on the evaluation dataset, calling the `evaluate_model`
-    procedure. Depending on the options, it will evaluate only in the final
-    model or in all the models in the checkpoints.
+    procedure. Depending on the options, it will evaluate only the final
+    model or all the models in the checkpoints.
 
     Parameters
     ----------
@@ -353,14 +348,14 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
     trainer: Optional[Trainer]
         A trainer to run the predictions. It is the one returned by the
         `train_model` procedure. If not given (because it was no training), the
-        procedure wll create a trainer for the evaluation tasks.
+        procedure will create a trainer for the evaluation tasks.
     model_checkpoints: Optional[ModelCheckpoint]
         The Model's Checkpoints returned by the `train_model` procedure. If not
-        given (because it was no training), the procedure wll create a trainer
+        given (because it was no training), the procedure will create a trainer
         for the evaluation tasks.
     """
     # Create the results directory (should be unique)
-    os.makedirs(config.output_dir / 'results' / config.timestamp)
+    os.makedirs(config.output_dir / 'results' / config.timestamp, exist_ok=True)
     model_name = config.model if config.model in MODELS else os.path.basename(config.model)
     model_name = f"{model_name}_{config.task_type}"
 
@@ -390,27 +385,14 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
         )
 
     if config.train:
-        # Training mode, try to fetch the last checkpoint from the symlink and check it
-        # corresponds to the actual last training checkpoint from trainer
+        # Training mode, try to fetch the last checkpoint from the trainer
         last_model_checkpoint = Path(model_checkpoints.format_checkpoint_name(
             {"epoch": trainer.current_epoch, "step": trainer.global_step}
         ))
-        last_model_checkpoint_symlink = Path(
-            f"{model_checkpoints.dirpath}/{model_name}_final.ckpt"
-        )
-        if not last_model_checkpoint_symlink.exists() or\
-                last_model_checkpoint_symlink.readlink() != last_model_checkpoint:
-            logger.warning(f"The last model checkpoint `{last_model_checkpoint}` doesn't "
-                           "correspond to the final checkpoint link "
-                           f"`{last_model_checkpoint_symlink}`. The evaluation will be done "
-                           f"with `{last_model_checkpoint}` as final checkpoint.")
     elif config.load_from_checkpoint is not None:
         # If there was no training, assumes the last checkpoint was loaded by
         # the `--load-from-checkpoint` option
         last_model_checkpoint = Path(config.load_from_checkpoint)
-        if last_model_checkpoint.is_symlink():
-            # If it is a symlink, get the real path to the checkpoint
-            last_model_checkpoint = last_model_checkpoint.readlink()
     else:
         # There isn't any information on what the last checkpoint is, it will run
         # all found checkpoints files with a warning
@@ -443,11 +425,6 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
     if config.eval_all_checkpoints:
         multiversions_warning = True
         for checkpoint_file in sorted(Path(model_checkpoints.dirpath).glob(f'{model_name}_*.ckpt')):
-            if checkpoint_file.name.endswith('_final.ckpt') or\
-                    (last_model_checkpoint is not None and
-                        checkpoint_file.name == last_model_checkpoint.name):
-                # Ignore the last checkpoint, it will be run at the end
-                continue
             if re.search(r"-v\d+.ckpt$", checkpoint_file.name) and multiversions_warning:
                 logger.warning("Multiple versions of checkpoint files were found "
                                "this could give unexpected results (checkpoints come "
@@ -558,8 +535,11 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation-split",
                         choices=["train", "test", "validation"],
                         help="The split to use for evaluation at the end of training "
-                             "(train, validation, test)."
-                             "If not given there won't be any evaluation done.")
+                             "(train, validation, test). "
+                             "If not given there won't be any evaluation done. "
+                             "WARNING: If training on multiple non CPU devices (e.g. GPU) it is "
+                             "strongly recommended to avoid evaluating during the same run, since "
+                             "that will result in unexpected behavior.")
     parser.add_argument("--validation",
                         action="store_true",
                         help="If active, runs validation after `--log-every-n-steps` steps. "
@@ -804,5 +784,11 @@ if __name__ == "__main__":
         trainer, model_checkpoints = train_model(data_module, model, config)
 
     if config.evaluation_split:
+        if config.accelerator != 'cpu' and config.num_devices != 1:
+            logger.warning("Trying to evaluate a model with multiple non CPU devices. "
+                           "This will result in unexpected behaviour. "
+                           "A better option is to run a separate script for the evaluation with "
+                           "a single device.")
+
         evaluate_models(data_module, model, config, trainer if config.train else None,
                         model_checkpoints if config.train else None)

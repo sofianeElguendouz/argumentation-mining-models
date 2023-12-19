@@ -168,7 +168,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     trainer = pl.Trainer(
         accelerator=config.accelerator,
         devices=config.num_devices,
-        strategy='auto',
+        strategy='ddp_find_unused_parameters_true',
         precision='16-mixed' if config.fp16 else '32-true',
         logger=model_logger,
         callbacks=callbacks,

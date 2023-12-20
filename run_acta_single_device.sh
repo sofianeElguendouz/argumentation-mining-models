@@ -8,13 +8,15 @@ set -ex
 INPUT_DIR=./data/neoplasm/
 OUTPUT_DIR=./output
 CHECKPOINT_PATH=checkpoints
-TASK_TYPE=rel-class
+TASK_TYPE=seq-tag
 MODEL=bert
 CACHE_DIR=./cache
 EVALUATION_SPLIT=test
 EPOCHS=3
 BATCH_SIZE=8
-MAX_SEQ_LENGTH=64
+MAX_SEQ_LENGTH=256
+LEARNING_RATE=2e-5
+LABELS="O B-Claim I-Claim B-Premise I-Premise"
 NUM_DEVICES=1
 NUM_WORKERS=-1
 LOG_STEPS=50
@@ -37,6 +39,8 @@ python ./run_acta.py \
   --train-batch-size $BATCH_SIZE \
   --eval-batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
+  --learning-rate $LEARNING_RATE \
+  --labels $LABELS \
   --lower-case \
   --log-every-n-steps $LOG_STEPS \
   --save-every-n-steps $SAVE_STEPS \

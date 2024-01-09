@@ -71,14 +71,14 @@ def get_data_splits(input_dir: PosixPath, task_type: str) -> Dict[str, PosixPath
     It will search the files based on the task name.
 
     Parameters
-    ----------
+    ==========
     input_dir: PosixPath
         Path to the input dir with the split files.
     task_type: str
         Used to determine the file extension.
 
     Returns
-    -------
+    =======
     Dict[str, PosixPath]
         A mapping between the split name and the associated file path to that
         split.
@@ -116,7 +116,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     model.
 
     Parameters
-    ----------
+    ==========
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
@@ -130,7 +130,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         argparse.
 
     Returns
-    -------
+    =======
     Tuple[Trainer, ModelCheckpoint]
         A tuple with the Lightning Trainer and the ModelCheckpoint to evaluate
         possible checkpoints.
@@ -223,7 +223,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
           with all the checkpoints.
 
     Parameters
-    ----------
+    ==========
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
@@ -334,7 +334,7 @@ def evaluate_models(data_module: pl.LightningDataModule, model: pl.LightningModu
     model or all the models in the checkpoints.
 
     Parameters
-    ----------
+    ==========
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information

@@ -36,7 +36,7 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     - https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/text-transformers.html
 
     Parameters
-    ----------
+    ==========
     model_name_or_path: str
         The path or the name of a Transformer Model (from the HF repository).
     label2id: Dict[str, int]
@@ -96,14 +96,14 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         Returns the Tensor for the los value.
 
         Parameters
-        ----------
+        ==========
         batch: BatchEncoding
             The same batch passed to `*_step`. It should have all the data
             needed to run the loss. In particular it is expected to have a
             `labels` key with the ground truth labels.
 
         Returns
-        -------
+        =======
         torch.Tensor
             The loss for the batch.
         """

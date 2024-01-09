@@ -38,7 +38,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     BaseDataset abstract class. Contains some common implementations for datasets classes.
 
     Parameters
-    ----------
+    ==========
     tokenizer: AutoTokenizer
         Hugging Face Tokenizer.
     path_to_dataset: str
@@ -92,7 +92,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         Must be implemented on each class that inherits from this one.
 
         Parameters
-        ----------
+        ==========
         path_to_dataset: str
             Path to the dataset to load (it comes from the class constructor).
         **kwargs
@@ -109,7 +109,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
     https://lightning.ai/docs/pytorch/stable/data/datamodule.html
 
     Parameters
-    ----------
+    ==========
     data_splits: Dict[str, PosixPath]
         Mapping between splits and paths to the files corresponding to such
         splits. It must have at least 1 split otherwise it will raise
@@ -197,7 +197,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Property that displays the map between labels and ids for the Datasets.
 
         Returns
-        -------
+        =======
         Dict[str, int]
             Mapping between a label and its corresponding numerical id.
         """
@@ -260,7 +260,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Returns the collate function. It depends on the type of dataset.
 
         Returns
-        -------
+        =======
         Callable
             A function or class with the __call__ method implemented.
         """
@@ -277,7 +277,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         for every device.
 
         Parameters
-        ----------
+        ==========
         stage: str
             One of `fit`, `test`, `validate` and `predict`. Only for
             compatibility.
@@ -292,7 +292,7 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Must be implemented on each class that inherits from this one.
 
         Parameters
-        ----------
+        ==========
         path_to_dataset: str
             Path to the dataset to load.
         """

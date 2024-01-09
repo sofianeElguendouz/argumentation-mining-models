@@ -315,8 +315,12 @@ def sequence_tagging(text: str,
         The returned value is a tuple where:
         - The first is a list of dictionaries with the aggregated annotations. It
           has one dictionary per group of annotations and it follows the order
-          encountered in the original text. Each dictionary is comprised of 2
+          encountered in the original text. Each dictionary is comprised of 3
           elements:
+            - The 'sidx': An integer representing the index of the sentence in
+              the whole text (which is splitted into sentences for easier
+              processing). This serves for reconstructing the sentences
+              afterwise.
             - The 'label': A string with the label of the annotated group
               (without the 'B-'/'I-' prepends, it aggregates them)
             - The 'text': The text of the annotated group (as processed and
@@ -367,23 +371,27 @@ def sequence_tagging(text: str,
             tokenizer=tokenizer,
             id2label=id2label
         )
-        annotations.extend(sentence_annotations)
+        # Add the sentence index to each of the sentences as we append them to the annotations
+        annotations.extend([
+            {'sidx': sentence_idx, **sentence} for sentence in sentence_annotations
+        ])
 
     # As a final step, to avoid having lots of irrelevant elements, we group all
-    # annotations that have the 'O' label and are contiguous. This is only for
-    # the 'O' label since contiguous relevant labels can be very well different
+    # annotations that have the 'O' label and are contiguous in the same sentence.
+    # This is only for the 'O' label since contiguous relevant labels can be very well different
     # elements.
     grouped_annotations = []
-    for label, label_group in groupby(annotations, key=lambda ann: ann['label']):
+    for (label, sidx), group in groupby(annotations, key=lambda ann: (ann['label'], ann['sidx'])):
         if label == 'O':
-            # We aggregate the contiguous 'O' annotations
+            # We aggregate the contiguous 'O' annotations that are part of the same sentence
             grouped_annotations.append({
+                'sidx': sidx,
                 'label': label,
-                'text': ' '.join([ann['text'].strip() for ann in label_group])
+                'text': ' '.join([ann['text'].strip() for ann in group])
             })
         else:
             # We leave the rest as is
-            grouped_annotations.extend(label_group)
+            grouped_annotations.extend(group)
 
     relevant = [
         idx for idx, annotation in enumerate(grouped_annotations) if annotation['label'] != 'O'

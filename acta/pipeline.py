@@ -52,7 +52,7 @@ def relation_classification(text: List[str],
     doesn't make any assumptions on the input text.
 
     Parameters
-    ----------
+    ==========
     text: List[str]
         A list with the sentences in the first group (after the [CLS] but before
         the first [SEP]).
@@ -90,7 +90,7 @@ def relation_classification(text: List[str],
         function.
 
     Returns
-    -------
+    =======
     List[Dict[str, str | float]]
         A list with dictionary with the prediction for each pair of elements
         given by parameter. Each dictionary has the following elements:
@@ -146,7 +146,7 @@ def _sentence_annotation(tokens: List[int],
     used by the `sequence_tagging` function.
 
     Parameters
-    ----------
+    ==========
     tokens: List[int]
         The list of token ids.
     predictions: List[int]
@@ -159,7 +159,7 @@ def _sentence_annotation(tokens: List[int],
         The mapping between labels ids and 'BIO' labels.
 
     Returns
-    -------
+    =======
     List[Dict[str, str]]
         The annotated groups for the sentence.
     """
@@ -278,7 +278,7 @@ def sequence_tagging(text: str,
     heuristics.
 
     Parameters
-    ----------
+    ==========
     text: str
         The text to be annotated. It will be splitted into sentences with NLTK
         and then will be tokenized and processed with the corresponding HF
@@ -310,7 +310,7 @@ def sequence_tagging(text: str,
         information.
 
     Returns
-    -------
+    =======
     Tuple[List[Dict[str, str]], List[int]]
         The returned value is a tuple where:
         - The first is a list of dictionaries with the aggregated annotations. It

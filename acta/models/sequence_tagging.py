@@ -40,7 +40,7 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     ECAI 2020. For more information check: https://hal.science/hal-02879293/
 
     Parameters
-    ----------
+    ==========
     model_name_or_path: str
         Refer to BaseTransformerModule.
     label2id: Dict[str, int]

@@ -30,7 +30,7 @@ def compute_metrics(true_labels: List[Union[int, str]],
     option to limit the F1-score only to relevant labels.
 
     Parameters
-    ----------
+    ==========
     true_labels: List[int|str]
         The list (or can be any ordered iterable as well) of the true labels
         (ground truth).
@@ -47,7 +47,7 @@ def compute_metrics(true_labels: List[Union[int, str]],
         `eval_accuracy`).
 
     Returns
-    -------
+    =======
     Dict[str, float]
         A mapping between each of the metrics names (optionally with the
         prepended prefix) and the metric value.
@@ -84,7 +84,7 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
     average. It will ignore any label that is not B or I type.
 
     Parameters
-    ----------
+    ==========
     true_labels: List[str]
         The list (or can be any ordered iterable as well) of the true labels
         (ground truth). They have to be strings in BIO format.
@@ -99,7 +99,7 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
         `eval_accuracy`).
 
     Returns
-    -------
+    =======
     Dict[str, float]
         A mapping between each of the metrics names (optionally with the
         prepended prefix) and the metric value.

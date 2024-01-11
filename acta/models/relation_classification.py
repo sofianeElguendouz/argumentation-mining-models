@@ -30,7 +30,7 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
     sentences (e.g. supports, attacks, etc.).
 
     Parameters
-    ----------
+    ==========
     model_name_or_path: str
         Refer to BaseTransformerModule.
     label2id: Dict[str, int]

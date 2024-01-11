@@ -37,7 +37,7 @@ class RelationClassificationDataset(BaseDataset):
     __label__ prefix).
 
     Parameters
-    ----------
+    ==========
     tokenizer: AutoTokenizer
         Refer to BaseDataset.
     path_to_dataset: str
@@ -160,7 +160,7 @@ class RelationClassificationDataModule(BaseDataModule):
         present, the true labels.
 
         Parameters
-        ----------
+        ==========
         input_ids: List[int] | List[List[int]]
             The tokens ids of a single instance or a batch of instances.
         predictions: int | List[Int]
@@ -170,7 +170,7 @@ class RelationClassificationDataModule(BaseDataModule):
             If given, the true labels.
 
         Return
-        ------
+        ======
         Tuple[str], List[Tuple[str]]
             Depending on the type of input, it can return a single tuple
             or a list of tuples (if a batch of instances). The tuple

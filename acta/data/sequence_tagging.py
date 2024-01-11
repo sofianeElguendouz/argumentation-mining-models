@@ -40,7 +40,7 @@ class SequenceTaggingDataset(BaseDataset):
     style label.
 
     Parameters
-    ----------
+    ==========
     tokenizer: AutoTokenizer
         Refer to BaseDataset.
     path_to_dataset: str
@@ -189,14 +189,14 @@ class SequenceTaggingDataset(BaseDataset):
         https://huggingface.co/docs/transformers/tasks/token_classification#preprocess
 
         Parameters
-        ----------
+        ==========
         sentence : Dict[str, List[str] | List[int]]
             A sentence from the `dataset` attribute that is comprised of a
             dictionary that maps two keys ('tokens' and 'labels') to a list of
             tokens and labels.
 
         Returns
-        -------
+        =======
         Dict[str, List[int]]
             The tokenized sentence as a dictionary with the corresponding key,
             value pairs needed to be processes by a Transformer Module.
@@ -318,7 +318,7 @@ class SequenceTaggingDataModule(BaseDataModule):
         iteration we need to address this.
 
         Parameters
-        ----------
+        ==========
         input_ids: List[int] | List[List[int]]
             The tokens ids of a single instance or a batch of instances.
         predictions: List[int] | List[List[int]]
@@ -328,7 +328,7 @@ class SequenceTaggingDataModule(BaseDataModule):
             If given, the true labels.
 
         Return
-        ------
+        ======
         List[Tuple[str]], List[List[Tuple[str]]]
             Depending on the type of input, it can return the predictions of a
             single input (List[Tuple[str]]) or for a batch of inputs

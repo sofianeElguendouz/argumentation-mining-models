@@ -19,7 +19,7 @@ Pytorch Lightning Module for Relation Classification.
 import torch
 
 from transformers import AutoModelForSequenceClassification
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from .base import BaseTransformerModule
 
@@ -41,6 +41,9 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
         Refer to BaseTransformerModule.
     cache_dir: Optional[str]
         Refer to BaseTransformerModule.
+    classes_weights: Optional[List[float]]
+        If given, it uses a weighted version of torch.nn.CrossEntropyLoss as the
+        loss instead of using the predefined hugging face model's loss.
     learning_rate: float
         Refer to BaseTransformerModule.
     weight_decay: float
@@ -58,6 +61,7 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
                  id2label: Dict[int, str],
                  config_name_or_path: Optional[str] = None,
                  cache_dir: Optional[str] = None,
+                 classes_weights: Optional[List[float]] = None,
                  learning_rate: float = 5e-5,
                  weight_decay: float = 0.0,
                  adam_epsilon: float = 1e-8,
@@ -66,22 +70,30 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
         super().__init__(model_name_or_path=model_name_or_path,
                          label2id=label2id, id2label=id2label,
                          config_name_or_path=config_name_or_path,
-                         cache_dir=cache_dir,
+                         cache_dir=cache_dir, classes_weights=classes_weights,
                          learning_rate=learning_rate, weight_decay=weight_decay,
                          adam_epsilon=adam_epsilon, warmup_steps=warmup_steps,
                          **kwargs)
+        assert classes_weights is None or len(classes_weights) == len(label2id)
 
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_name_or_path,
             config=self.config,
             cache_dir=cache_dir
         )
+        self._classes_weights = None if classes_weights is None else torch.tensor(classes_weights)
 
     def forward(self, **inputs):
         return self.model(**inputs)
 
     def _loss(self, batch: Any) -> torch.Tensor:
-        return self(**batch).loss
+        if self._classes_weights is None:
+            return self(**batch).loss
+        else:
+            outputs = self.model(**batch)
+            return torch.nn.functional.cross_entropy(
+                input=outputs.logits, target=batch.labels, weight=self._classes_weights
+            )
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         """

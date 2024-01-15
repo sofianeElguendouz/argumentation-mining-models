@@ -92,7 +92,8 @@ class RelationClassificationTransformerModule(BaseTransformerModule):
         else:
             outputs = self.model(**batch)
             return torch.nn.functional.cross_entropy(
-                input=outputs.logits, target=batch.labels, weight=self._classes_weights
+                input=outputs.logits, target=batch.labels,
+                weight=self._classes_weights.to(self.device)
             )
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):

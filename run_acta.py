@@ -292,7 +292,7 @@ def evaluate_model(data_module: pl.LightningDataModule,
             relevant_labels = config.relevant_labels
         else:
             relevant_labels = [lbl for lbl in data_module.label2id.keys()
-                               if lbl not in {'O', 'X', 'PAD'}]
+                               if lbl not in {'X', 'PAD'}]
         metrics = compute_metrics(
             true_labels, pred_labels,
             relevant_labels=relevant_labels,
@@ -623,6 +623,10 @@ if __name__ == "__main__":
                         default=0,
                         type=int,
                         help="Number of steps for linear warmup.")
+    parser.add_argument("--weighted-loss",
+                        action="store_true",
+                        help="Only useful for Relationship Classification trainings. "
+                             "If true the loss function is weighted inversely by class.")
     parser.add_argument("--log-every-n-steps",
                         default=50,
                         type=int,
@@ -777,7 +781,8 @@ if __name__ == "__main__":
             learning_rate=config.learning_rate,
             weight_decay=config.weight_decay,
             adam_epsilon=config.adam_epsilon,
-            warmup_steps=config.warmup_steps
+            warmup_steps=config.warmup_steps,
+            classes_weights=data_module.classes_weights if config.weighted_loss else None
         )
 
     if config.train:

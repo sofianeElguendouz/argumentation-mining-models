@@ -138,7 +138,7 @@ def relation_classification(text: List[str],
 
 def _sentence_annotation(tokens: List[int],
                          predictions: List[int],
-                         special_tokens_mask: List[int],
+                         word_ids: List[int],
                          tokenizer: AutoTokenizer,
                          id2label: Dict[int, str]) -> List[Dict[str, str]]:
     """
@@ -151,8 +151,8 @@ def _sentence_annotation(tokens: List[int],
         The list of token ids.
     predictions: List[int]
         The list of predicted labels.
-    special_tokens_mask: List[int]
-        The mask for special tokens.
+    word_ids: List[int]
+        The word ids that identify what word are part of each of the subtokens.
     tokenizer: AutoTokenizer
         The tokenizer (needed for decoding the token ids to text).
     id2label: Dict[int, str]
@@ -163,30 +163,66 @@ def _sentence_annotation(tokens: List[int],
     List[Dict[str, str]]
         The annotated groups for the sentence.
     """
-    assert len(tokens) == len(predictions) == len(special_tokens_mask), \
+    assert len(tokens) == len(predictions) == len(word_ids), \
         "There was a problem when using the model for inference. " \
         "The tokens and predictions sizes do not match."
     annotations = []
     current_annotation = {}
 
-    for i, (token, prediction, mask) in enumerate(zip(tokens, predictions, special_tokens_mask)):
+    for i, (token, prediction, wid) in enumerate(zip(tokens, predictions, word_ids)):
         label = id2label[prediction]
-        if mask == 1:
+        if wid is None:
             # We ignore special tokens from the final result
             continue
         if not current_annotation:
             # There isn't an annotation group yet, start one, regardless of label type.
             # We strip the 'B-' and 'I-' from the labels start to aggregate the annotations
-            current_annotation = {"label": label.lstrip('B-').lstrip('I-'), "tokens": [token]}
+            current_annotation = {
+                "label": label.removeprefix('B-').removeprefix('I-'),
+                "tokens": [token],
+                "word_ids": [wid]
+            }
+        elif wid == current_annotation["word_ids"][-1]:
+            # If the current token is a continuation of the previous one we have a couple of
+            # possibilities
+            if label.removeprefix('B-').removeprefix('I-') == current_annotation['label']\
+                    or label == 'O':
+                # If the subtoken has the same group label as the current annotation, or
+                # if the current subtoken is annotated with and 'O', make it part of the current
+                # annotation, avoiding cases with a word splitted in multiple subtokens and
+                # each subtoken being part of a different label
+                current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
+            else:
+                # If the subtoken has a label different than the current annotation, but is not the
+                # 'O' label (e.g. we have a subtoken with a 'B-' or 'I-' type of label) then
+                # give that label precedence by starting a new annotation with that label and all
+                # the subtokens that are part of the token
+                tokens = current_annotation.pop('tokens')
+                wids = current_annotation.pop('word_ids')
+
+                # Get the subtokens that are not part of the token that contains the current
+                # subtoken with different label
+                current_annotation_tokens = [t for t, w in zip(tokens, wids) if w != wid]
+                current_annotation['text'] = tokenizer.decode(current_annotation_tokens)
+                annotations.append(current_annotation)
+
+                # Create a new annotation with the current subtoken's token
+                current_annotation = {
+                    "label": label.removeprefix('B-').removeprefix('I-'),
+                    "tokens": [t for t, w in zip(tokens, wids) if w == wid],
+                    "word_ids": [w for w in wids if w == wid]
+                }
         elif label.startswith('B-'):
             # This annotation heuristics assumes that the 'B-' label is generally correct, and
-            # tries to start a new annotation group unless the following condition is met
+            # tries to start a new annotation group except for some conditions
             if len(current_annotation['tokens']) < 3 and current_annotation['label'] != 'O':
                 # If the current label starts with a 'B-' but there are less than 3 tokens in
                 # the current annotation with the current label being other than the 'O' label
                 # then we have a token that is part of the current annotation.
                 # This happens when having something like 'B-', 'O', 'B-', 'I-'...
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
             else:
                 # If there are 3 or more tokens already in the current annotation
                 # or the current label is 'O' we start a new annotation
@@ -195,7 +231,11 @@ def _sentence_annotation(tokens: List[int],
                 # current annotation
                 current_annotation['text'] = tokenizer.decode(current_annotation.pop('tokens'))
                 annotations.append(current_annotation)
-                current_annotation = {"label": label.lstrip('B-'), "tokens": [token]}
+                current_annotation = {
+                    "label": label.removeprefix('B-'),
+                    "tokens": [token],
+                    "word_ids": [wid]
+                }
         elif label.startswith('I-'):
             # For the 'I-' labels we only create a new annotation if we are coming
             # from the 'O' annotation. This is for the weird cases where there are
@@ -203,7 +243,11 @@ def _sentence_annotation(tokens: List[int],
             if current_annotation['label'] == 'O':
                 current_annotation['text'] = tokenizer.decode(current_annotation.pop('tokens'))
                 annotations.append(current_annotation)
-                current_annotation = {"label": label.lstrip('I-'), "tokens": [token]}
+                current_annotation = {
+                    "label": label.removeprefix('I-'),
+                    "tokens": [token],
+                    "word_ids": [wid]
+                }
             else:
                 # When coming from another label we just add the token to the group.
                 # This heuristics assumes that the current annotation has the right label
@@ -215,35 +259,45 @@ def _sentence_annotation(tokens: List[int],
                 # 'B-' type label is the correct one, and many times it can happen something like
                 # 'B-lbl1', 'I-lbl1', 'I-lbl2', 'I-lbl1', 'I-lbl1'
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
         else:
             # For the 'O' labels, it can be a fluke contained between 'B-'/'I-' labels.
             # We check the next 2 labels (if available) and decide what to do based on that.
             if i + 1 < len(predictions) and id2label[predictions[i+1]] != 'O':
                 # It's a fluke, treat it as part of the current annotation
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
             elif i + 2 < len(predictions) and id2label[predictions[i+2]] != 'O':
                 # It's a fluke, treat it as part of the current annotation
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
             elif i + 1 == len(predictions):
                 # We are in the last token, we always assume is part of the current annotation
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
             elif current_annotation['label'] == label:
                 # If the current annotation has label 'O' already, then it's
                 # part of the current annotation
                 current_annotation['tokens'].append(token)
+                current_annotation['word_ids'].append(wid)
             else:
                 # We have more than 2 occurrences of the 'O' label (or we are at the tail end
                 # of the text), we can assume that we have a group of 'O' annotated tokens
                 # thus we start a new annotation for them
                 current_annotation['text'] = tokenizer.decode(current_annotation.pop('tokens'))
                 annotations.append(current_annotation)
-                current_annotation = {"label": label, "tokens": [token]}
+                current_annotation = {
+                    "label": label,
+                    "tokens": [token],
+                    "word_ids": [wid]
+                }
 
     if current_annotation.get('tokens'):
         # After traversing all the tokens, we check if we still have an unprocessed
         # annotation (i.e. it has a list of tokens that hasn't been decoded).
         # If so, we decode them and add them to the annotations
         current_annotation['text'] = tokenizer.decode(current_annotation.pop('tokens'))
+        current_annotation.pop('word_ids')  # Remove the word_ids key since it's no longer needed
         annotations.append(current_annotation)
 
     return annotations
@@ -273,6 +327,10 @@ def sequence_tagging(text: str,
     E.g. If the model finds:
         B-lbl1, I-lbl2, I-lbl2, I-lbl1, ...
         It will set the group as having the 'lbl1' instead of 'lbl2'
+
+    Finally, the heuristics always make all the subtokens conforming a single
+    token part of the same label. And if one subtoken has a B/I label, it will
+    take precedence over any 'O' label the other subtokens of the token have.
 
     Check the comments on the code for further understanding of other
     heuristics.
@@ -352,9 +410,7 @@ def sequence_tagging(text: str,
 
     sentences = sent_tokenize(text)
     tokenized_text = tokenizer(sentences, padding=True, return_tensors='pt',
-                               max_length=max_seq_length, truncation=truncation_strategy,
-                               return_special_tokens_mask=True)
-    special_tokens_mask = tokenized_text.pop('special_tokens_mask')
+                               max_length=max_seq_length, truncation=truncation_strategy)
     predictions = model(**tokenized_text)
 
     annotations = []
@@ -363,11 +419,11 @@ def sequence_tagging(text: str,
         # For each sentence, run the annotation function for a single sentence
         sentence_tokens = tokenized_text['input_ids'][sentence_idx].tolist()
         sentence_predictions = predictions[0][sentence_idx].tolist()
-        sentence_special_tokens_mask = special_tokens_mask[sentence_idx].tolist()
+        sentence_word_ids = tokenized_text.word_ids(sentence_idx)
         sentence_annotations = _sentence_annotation(
             tokens=sentence_tokens,
             predictions=sentence_predictions,
-            special_tokens_mask=sentence_special_tokens_mask,
+            word_ids=sentence_word_ids,
             tokenizer=tokenizer,
             id2label=id2label
         )

@@ -20,6 +20,7 @@ The Dataset reads column based data (csv, tsv) for Relation Classification.
 
 import csv
 
+from collections import Counter
 from transformers import AutoTokenizer, DataCollatorWithPadding
 from transformers.tokenization_utils_base import BatchEncoding
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -143,6 +144,35 @@ class RelationClassificationDataModule(BaseDataModule):
         "Support",
         "Attack"
     ]
+
+    @property
+    def classes_weights(self) -> List[float]:
+        """
+        Returns the weights for the classes. The class weight is calculated as
+        the inverse of the ratio of occurrences of each class. This way the less
+        occurrences a class has, the more important it is.
+
+        It will try to access based on a priority. First the train dataset, if
+        it's not present, it will use the evaluation_split dataset. An finally
+        it will check for any dataset present.
+
+        If there's no dataset it raises an error.
+        """
+        if len(self.datasets) == 0:
+            raise ValueError("The datasets are not present. Please run `setup`.")
+
+        if 'train' in self.datasets:
+            # First try with the training dataset
+            target = self.datasets['train'].target
+        elif self.evaluation_split in self.datasets:
+            # Check the evaluation dataset
+            target = self.datasets[self.evaluation_split].target
+        else:
+            # Return whatever dataset that is present as a last resource
+            target = list(self.datasets.values())[0].target
+
+        class_counter = Counter(target)
+        return [1 - class_counter[c] / sum(class_counter.values()) for c in sorted(class_counter)]
 
     @property
     def collate_fn(self) -> Callable:

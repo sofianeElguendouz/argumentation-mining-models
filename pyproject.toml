@@ -12,7 +12,7 @@ authors = [
 description = "implementation of the 'Transformed-based Argument Mining' module"
 readme = "README.md"
 requires-python = ">=3.10.8"
-dynamic = ["dependencies"]
+dynamic = ["dependencies", "optional-dependencies"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache v2.0 License"
@@ -28,3 +28,4 @@ exclude = ["*venv*", "*env*"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+optional-dependencies.dev = { file = ["dev-requirements.txt"] }

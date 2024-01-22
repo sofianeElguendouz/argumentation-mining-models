@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 if TYPE_CHECKING:
     # Only import this modules if needed for type checking
     # This is required to follow pep8 on type hinting and annotations
-    from acta.models import RelationClassificationTransformerModule, \
+    from .models import RelationClassificationTransformerModule, \
         SequenceTaggingTransformerModule
 
 logger = logging.getLogger(__name__)

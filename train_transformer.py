@@ -31,9 +31,10 @@ from pathlib import Path, PosixPath
 from sklearn.metrics import classification_report
 from typing import Dict, Optional, Tuple, Union
 
-from acta.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.utils import compute_metrics, compute_seq_tag_labels_metrics
+from am_transformer.data import RelationClassificationDataModule, SequenceTaggingDataModule
+from am_transformer.models import RelationClassificationTransformerModule, \
+    SequenceTaggingTransformerModule
+from am_transformer.utils import compute_metrics, compute_seq_tag_labels_metrics
 
 
 # Available models to train

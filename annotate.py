@@ -26,8 +26,9 @@ import sys
 from itertools import permutations
 from pathlib import Path
 
-from acta.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
-from acta.pipeline import relation_classification, sequence_tagging
+from am_transformer.models import RelationClassificationTransformerModule, \
+    SequenceTaggingTransformerModule
+from am_transformer.pipeline import relation_classification, sequence_tagging
 
 logger = logging.getLogger(__name__)
 

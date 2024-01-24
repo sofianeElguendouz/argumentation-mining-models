@@ -119,6 +119,9 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     def _loss(self, batch: Dict[str, Any]) -> torch.Tensor:
         labels = batch.pop('labels')
         path, emissions = self(**batch)
+        # FIXME: MLFlow Logger runs the same batch twice for some reason, thus
+        # if I don't restore the labels it fails
+        batch["labels"] = labels
         if self.hparams.masked_label_id is not None:
             mask = (labels != self.hparams.masked_label_id)
         else:

@@ -288,14 +288,6 @@ class SequenceTaggingDataModule(BaseDataModule):
         "I-Claim",
         "B-Premise",
         "I-Premise",
-        "B-Marker",
-        "I-Marker",
-        "B-Treatment",
-        "I-Treatment",
-        "B-Disease",
-        "I-Disease",
-        "B-Diagnostics",
-        "I-Diagnostics"
     ]
 
     @property
@@ -314,10 +306,10 @@ class SequenceTaggingDataModule(BaseDataModule):
         tokens with their associated prediction (one per token). If true
         labels are provided, it will add them as well.
 
-        TODO (Issue #10): This method doesn't make any realignment of tokens and
-        labels, it doesn't regroup the sub-tokens and simply returns each
-        subtoken with the corresponding label of the subtoken. For the next
-        iteration we need to address this.
+        TODO: This method doesn't make any realignment of tokens and labels, it
+        doesn't regroup the sub-tokens and simply returns each subtoken with the
+        corresponding label of the subtoken. For the next iteration we need to
+        address this.
 
         Parameters
         ==========

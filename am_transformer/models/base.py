@@ -111,11 +111,13 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         """
 
     def training_step(self, batch, batch_idx):
+        loss = self._loss(batch)
+        self.log("train_loss", loss, on_epoch=True)
         return self._loss(batch)
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         loss = self._loss(batch)
-        self.log("val_loss", loss, sync_dist=True)
+        self.log("val_loss", loss, sync_dist=True, on_epoch=True, on_step=False)
         return {"val_loss": loss}
 
     def configure_optimizers(self):

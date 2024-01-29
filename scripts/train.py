@@ -273,6 +273,10 @@ if __name__ == "__main__":
                         action="store_true",
                         help="Only useful for Relationship Classification trainings. "
                              "If true the loss function is weighted inversely by class.")
+    parser.add_argument("--crf-loss",
+                        action="store_true",
+                        help="Only useful for Sequence Tagging trainings. "
+                             "If true the loss function uses Conditional Random Fields.")
     parser.add_argument("--log-every-n-steps",
                         default=50,
                         type=int,
@@ -382,7 +386,8 @@ if __name__ == "__main__":
             learning_rate=config.learning_rate,
             weight_decay=config.weight_decay,
             warmup_steps=config.warmup_steps,
-            classes_weights=data_module.classes_weights if config.weighted_loss else None
+            classes_weights=data_module.classes_weights if config.weighted_loss else None,
+            crf_loss=config.crf_loss
         )
 
     train_model(data_module, model, config)

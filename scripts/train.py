@@ -82,10 +82,10 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     # MLFlow Setup
     mlflow_uri = f"file://{config.output_dir.absolute().as_posix()}"
     mlflow_experiment_name = f"{config.task_type}/{model_name}/train"
-    if config.experiment_name:
+    if config.experiment_name:  # Add experiment name as suffix
         mlflow_experiment_name += f"/{config.experiment_name}"
     mlflow_run_name = config.timestamp
-    if config.run_name:
+    if config.run_name:  # Add the run name as prefix
         mlflow_run_name = f"{config.run_name}/{mlflow_run_name}"
     mlflow.set_tracking_uri(mlflow_uri)
     mlflow.set_experiment(mlflow_experiment_name)
@@ -116,7 +116,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         checkpoint_path = Path(run.info.artifact_uri.removeprefix("file://")) / "checkpoints"
         model_checkpoints = ModelCheckpoint(
             dirpath=checkpoint_path,
-            filename=model_name + "_{epoch:02d}_{step:05d}",
+            filename=mlflow_experiment_name.replace("/", "_") + "_{epoch:02d}_{step:05d}",
             save_top_k=-1,  # Save all models
             every_n_train_steps=config.save_every_n_steps,
             enable_version_counter=False  # Overwrite existing checkpoints
@@ -177,8 +177,6 @@ if __name__ == "__main__":
                         type=Path,
                         help="The validation dataset path. It should already be in the format "
                              "for the corresponding task (`--task-type`).")
-
-    # Required parameters
     parser.add_argument("--output-dir",
                         required=True,
                         type=Path,
@@ -194,8 +192,6 @@ if __name__ == "__main__":
                              "The HF model can be either a model available at the HF Hub, or "
                              "a model path. To load a checkpoint reached using this same trainer "
                              "script please use the `--load-from-checkpoint` option.")
-
-    # Other parameters
     parser.add_argument("--config",
                         help="Pretrained config name or path (if not the same as `model`).")
     parser.add_argument("--tokenizer",
@@ -206,9 +202,9 @@ if __name__ == "__main__":
     parser.add_argument("--load-from-checkpoint",
                         help="Path to a checkpoint file to continue training.")
     parser.add_argument("--experiment-name",
-                        help="Name of MLFlow experiment.")
+                        help="Suffix of MLFlow experiment.")
     parser.add_argument("--run-name",
-                        help="Name of MLFlow run.")
+                        help="Prefix of MLFlow run.")
     parser.add_argument("--validation",
                         action="store_true",
                         help="If active, runs validation after `--log-every-n-steps` steps. "
@@ -285,9 +281,6 @@ if __name__ == "__main__":
                         default=50,
                         type=int,
                         help="Save checkpoint every N update steps.")
-    parser.add_argument("--overwrite-output",
-                        action="store_true",
-                        help="Overwrite the content of the output directory.")
     parser.add_argument("--random-seed",
                         default=42,
                         type=int,
@@ -306,21 +299,15 @@ if __name__ == "__main__":
         level=logging.DEBUG if config.debug else logging.INFO,
     )
 
-    # Checking pre-conditions
-    if config.output_dir.exists() and list(config.output_dir.glob('*')) \
-            and not config.overwrite_output:
-        logger.error(f"Output directory ({config.output_dir}) already exists and is not empty. "
-                     "Use --overwrite-output to ovewrite the directory (information will be lost).")
-        sys.exit()
-
     if config.model not in MODELS and not Path(config.model).is_file() \
             and len(list(list_models(search=config.model))) == 0:
         logger.error(f"The model {config.model} is not available in the list of models: "
                      f"{', '.join(MODELS.keys())}; and is neither a HF file or HF model.")
-        sys.exit()
+        sys.exit(1)
 
-    data_splits = {}
-    data_splits['train'] = config.train_data
+    data_splits = {
+        'train': config.train_data
+    }
     if config.validation_data is not None:
         data_splits['validation'] = config.validation_data
 
@@ -339,9 +326,6 @@ if __name__ == "__main__":
         f"No. of devices: {config.num_devices}. -"
         f"16-bit precision training: {config.fp16}."
     )
-
-    # Create output directory
-    os.makedirs(config.output_dir, exist_ok=True)
 
     # Timestamp to keep track of results
     config.timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")

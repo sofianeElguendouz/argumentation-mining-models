@@ -47,5 +47,4 @@ python ./scripts/train.py \
   --weighted-loss \
   --log-every-n-steps $LOG_STEPS \
   --save-every-n-steps $SAVE_STEPS \
-  --overwrite-output \
   --random-seed $RANDOM_SEED

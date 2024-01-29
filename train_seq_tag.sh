@@ -46,5 +46,4 @@ python ./scripts/train.py \
   --warmup-steps $WARMUP_STEPS \
   --log-every-n-steps $LOG_STEPS \
   --save-every-n-steps $SAVE_STEPS \
-  --overwrite-output \
   --random-seed $RANDOM_SEED

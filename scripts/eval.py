@@ -212,7 +212,8 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             weight_decay=config.weight_decay,
             adam_epsilon=config.adam_epsilon,
             warmup_steps=config.warmup_steps,
-            classes_weights=data_module.classes_weights if config.weighted_loss else None
+            classes_weights=data_module.classes_weights if config.weighted_loss else None,
+            crf_loss=config.crf_loss
         )
 
     mlflow_experiment_name = f"{config.task_type}/{model_name}/eval"
@@ -383,6 +384,14 @@ if __name__ == "__main__":
                         default=42,
                         type=int,
                         help="Initial random seed.")
+    parser.add_argument("--weighted-loss",
+                        action="store_true",
+                        help="Only useful for Relationship Classification trainings. "
+                             "If true the loss function is weighted inversely by class.")
+    parser.add_argument("--crf-loss",
+                        action="store_true",
+                        help="Only useful for Sequence Tagging trainings. "
+                             "If true the loss function uses Conditional Random Fields.")
     parser.add_argument("--fp16",
                         action="store_true",
                         help="Whether to use 16-bit (mixed) precision")

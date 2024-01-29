@@ -10,7 +10,7 @@ EXPERIMENT_NAME="neoplasm"
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 
-BATCH_SIZE=16
+BATCH_SIZE=32
 MAX_SEQ_LENGTH=128
 RANDOM_SEED=42
 
@@ -27,4 +27,5 @@ python ./scripts/eval.py \
   --batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
   --lower-case \
+  --weighted-loss \
   --random-seed $RANDOM_SEED

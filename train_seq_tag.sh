@@ -3,16 +3,19 @@
 set -ex
 
 TRAIN_FILE=./data/neoplasm/train.conll
+TEST_FILE=./data/neoplasm/test.conll
 VALIDATION_FILE=./data/neoplasm/dev.conll
 OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=bert
 EXPERIMENT_NAME="neoplasm"
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
+RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
 EPOCHS=5
 EARLY_STOP=2
-BATCH_SIZE=8
+TRAIN_BATCH_SIZE=8
+EVAL_BATCH_SIZE=32
 GRADIENT_ACCUMULATION=1
 MAX_GRAD=1
 MAX_SEQ_LENGTH=128
@@ -36,7 +39,7 @@ python ./scripts/train.py \
   --num-workers -1 \
   --epochs $EPOCHS \
   --early-stopping $EARLY_STOP \
-  --batch-size $BATCH_SIZE \
+  --batch-size $TRAIN_BATCH_SIZE \
   --gradient-accumulation-steps $GRADIENT_ACCUMULATION \
   --max-grad-norm $MAX_GRAD \
   --max-seq-length $MAX_SEQ_LENGTH \
@@ -44,6 +47,23 @@ python ./scripts/train.py \
   --learning-rate $LEARNING_RATE \
   --weight-decay $WEIGHT_DECAY \
   --warmup-steps $WARMUP_STEPS \
+  --crf-loss \
   --log-every-n-steps $LOG_STEPS \
   --save-every-n-steps $SAVE_STEPS \
+  --random-seed $RANDOM_SEED
+
+python ./scripts/eval.py \
+  --test-data $TEST_FILE \
+  --output-dir $OUTPUT_DIR \
+  --task-type $TASK_TYPE \
+  --model $MODEL \
+  --experiment-name "$EXPERIMENT_NAME" \
+  --eval-all-checkpoints \
+  --labels $LABELS \
+  --relevant-labels $RELEVANT_LABELS \
+  --num-workers -1 \
+  --batch-size $EVAL_BATCH_SIZE \
+  --max-seq-length $MAX_SEQ_LENGTH \
+  --lower-case \
+  --crf-loss \
   --random-seed $RANDOM_SEED

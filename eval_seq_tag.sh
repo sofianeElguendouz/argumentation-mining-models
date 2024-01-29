@@ -10,7 +10,7 @@ EXPERIMENT_NAME="neoplasm"
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
-BATCH_SIZE=16
+BATCH_SIZE=32
 MAX_SEQ_LENGTH=128
 RANDOM_SEED=42
 
@@ -27,4 +27,5 @@ python ./scripts/eval.py \
   --batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
   --lower-case \
+  --crf-loss \
   --random-seed $RANDOM_SEED

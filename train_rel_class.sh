@@ -3,16 +3,19 @@
 set -ex
 
 TRAIN_FILE=./data/neoplasm/train_relations.tsv
+TEST_FILE=./data/neoplasm/test_relations.tsv
 VALIDATION_FILE=./data/neoplasm/dev_relations.tsv
 OUTPUT_DIR=./output
 TASK_TYPE=rel-class
 MODEL=bert
 EXPERIMENT_NAME="neoplasm"
 LABELS="noRel Attack Support"
+RELEVANT_LABELS="Attack Support"
 
 EPOCHS=5
 EARLY_STOP=2
-BATCH_SIZE=8
+TRAIN_BATCH_SIZE=8
+EVAL_BATCH_SIZE=32
 GRADIENT_ACCUMULATION=1
 MAX_GRAD=1
 MAX_SEQ_LENGTH=128
@@ -36,7 +39,7 @@ python ./scripts/train.py \
   --num-workers -1 \
   --epochs $EPOCHS \
   --early-stopping $EARLY_STOP \
-  --batch-size $BATCH_SIZE \
+  --batch-size $TRAIN_BATCH_SIZE \
   --gradient-accumulation-steps $GRADIENT_ACCUMULATION \
   --max-grad-norm $MAX_GRAD \
   --max-seq-length $MAX_SEQ_LENGTH \
@@ -47,4 +50,20 @@ python ./scripts/train.py \
   --weighted-loss \
   --log-every-n-steps $LOG_STEPS \
   --save-every-n-steps $SAVE_STEPS \
+  --random-seed $RANDOM_SEED
+
+python ./scripts/eval.py \
+  --test-data $TEST_FILE \
+  --output-dir $OUTPUT_DIR \
+  --task-type $TASK_TYPE \
+  --model $MODEL \
+  --experiment-name "$EXPERIMENT_NAME" \
+  --eval-all-checkpoints \
+  --labels $LABELS \
+  --relevant-labels $RELEVANT_LABELS \
+  --num-workers -1 \
+  --batch-size $EVAL_BATCH_SIZE \
+  --max-seq-length $MAX_SEQ_LENGTH \
+  --lower-case \
+  --weighted-loss \
   --random-seed $RANDOM_SEED

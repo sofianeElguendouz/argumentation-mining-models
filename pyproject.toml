@@ -3,13 +3,12 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "antidote-acta"
-version = "0.1.2"
+name = "argumentation-mining-transformers"
+version = "0.3.0"
 authors = [
     { name="Cristian Cardellino", email="cristian.a.cardellino@inria.fr" },
-    { name="Theo Alkibiades Collias", email="theo-alkibiades.collias@inria.fr" }
 ]
-description = "implementation of the 'Transformed-based Argument Mining' module"
+description = "Implementation of the 'Transformed-based Argument Mining' module"
 readme = "README.md"
 requires-python = ">=3.10.8"
 dynamic = ["dependencies", "optional-dependencies"]
@@ -19,11 +18,11 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://gitlab.com/wimmics-antidote/antidote-acta"
-Issues = "https://gitlab.com/wimmics-antidote/antidote-acta/-/issues"
+Homepage = "https://github.com/crscardellino/argumentation-mining-transformers"
+Issues = "https://github.com/crscardellino/argumentation-mining-transformers/issues"
 
 [tool.setuptools.packages.find]
-include = ["acta*"]
+include = ["am_transformer*"]
 exclude = ["*venv*", "*env*"]
 
 [tool.setuptools.dynamic]

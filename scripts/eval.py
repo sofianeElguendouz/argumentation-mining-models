@@ -23,13 +23,14 @@ import logging
 import lightning.pytorch as pl
 import mlflow
 import os
+import pandas as pd
 import re
 import sys
 
 from datetime import datetime
 from huggingface_hub import list_models
 from pathlib import Path
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from tempfile import TemporaryDirectory
 from typing import Dict, Union
 
@@ -133,12 +134,23 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         metrics["predictions"] = '\n\n'.join(['\n'.join(['\t'.join(token) for token in sentence])
                                               for sentence in decoded_predictions])
 
+    sorted_labels = [data_module.id2label[idx] for idx in sorted(data_module.id2label.keys())]
     metrics["classification_report"] = classification_report(
         true_labels, pred_labels,
         # Remove the PAD label as it shouldn't be taken into consideration
-        labels=list([lbl for lbl in data_module.label2id.keys() if lbl != 'PAD']),
+        labels=sorted_labels,
         zero_division=0
     )
+    metrics["classification_report_relevant"] = classification_report(
+        true_labels, pred_labels,
+        # Remove the PAD label as it shouldn't be taken into consideration
+        labels=[lbl for lbl in sorted_labels if lbl in relevant_labels],
+        zero_division=0
+    )
+    cm = confusion_matrix(
+        true_labels, pred_labels, labels=sorted_labels
+    )
+    metrics["confusion_matrix"] = pd.DataFrame(cm, index=sorted_labels, columns=sorted_labels)
 
     return metrics
 
@@ -273,12 +285,23 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 model = TASKS[config.task_type][1].load_from_checkpoint(checkpoint_file)
                 metrics = evaluate_model(data_module, model, config, trainer)
                 classification_report = metrics.pop("classification_report")
+                classification_report_relevant = metrics.pop("classification_report_relevant")
+                cm = metrics.pop("confusion_matrix")
                 predictions = metrics.pop("predictions")
                 mlflow.log_metrics(metrics, step=checkpoint_step)
                 with TemporaryDirectory() as dh:
                     with open(f"{dh}/report_step={checkpoint_step:05d}.txt", "wt") as fh:
                         print(classification_report, file=fh)
                     mlflow.log_artifact(f"{dh}/report_step={checkpoint_step:05d}.txt")
+
+                    with open(f"{dh}/relevant_report_step={checkpoint_step:05d}.txt", "wt") as fh:
+                        print(classification_report_relevant, file=fh)
+                    mlflow.log_artifact(f"{dh}/relevant_report_step={checkpoint_step:05d}.txt")
+
+                    with open(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt", "wt") as fh:
+                        cm.to_string(fh)
+                    mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt")
+
                     predictions_file = f"predictions_step={checkpoint_step:05d}"
                     if config.task_type == "rel-class":
                         predictions_file += ".tsv"
@@ -291,12 +314,23 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             # Evaluate directly on the model
             metrics = evaluate_model(data_module, model_or_checkpoint, config, trainer)
             classification_report = metrics.pop("classification_report")
+            classification_report_relevant = metrics.pop("classification_report_relevant")
+            cm = metrics.pop("confusion_matrix")
             predictions = metrics.pop("predictions")
             mlflow.log_metrics(metrics)
             with TemporaryDirectory() as dh:
-                with open(f"{dh}/report_step={checkpoint_step:05d}.txt", "wt") as fh:
+                with open(f"{dh}/report.txt", "wt") as fh:
                     print(classification_report, file=fh)
                 mlflow.log_artifact(f"{dh}/report.txt")
+
+                with open(f"{dh}/relevant_report.txt", "wt") as fh:
+                    print(classification_report_relevant, file=fh)
+                mlflow.log_artifact(f"{dh}/relevant_report.txt")
+
+                with open(f"{dh}/confusion_matrix.txt", "wt") as fh:
+                    cm.to_string(fh)
+                mlflow.log_artifact(f"{dh}/confusion_matrix.txt")
+
                 predictions_file = "predictions"
                 if config.task_type == "rel-class":
                     predictions_file += ".tsv"

@@ -164,6 +164,13 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
             # Only in the main process, record the path to the last checkpoint as a MLFlow tag
             mlflow.set_tag("finalCheckpointPath", last_model_checkpoint.absolute().as_posix())
 
+    # After the experiment is finished, we need to run a cleanup on MLFlow runs
+    # that were created by DDP strategy (that spawned child processes), this runs
+    # don't store any particularly useful information
+    if not trainer.is_global_zero:
+        logger.info(f"Cleaning up extra run: {run.info.run_id}")
+        mlflow.MlflowClient(mlflow_uri).delete_run(run.info.run_id)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

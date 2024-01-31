@@ -196,7 +196,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         mlflow_train_experiment_id = mlflow_train_experiment.experiment_id
         runs = mlflow_client.search_runs(
             experiment_ids=[mlflow_train_experiment_id],
-            filter_string=f"run_name LIKE '{config.run_name}/%'" if config.run_name else '',
+            filter_string=f"run_name LIKE '{config.run_name}%'" if config.run_name else '',
             order_by=['start_time DESC']
         )
         if not runs:

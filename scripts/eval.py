@@ -305,6 +305,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                     mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt")
 
                     # Normalized (by row or "true" values) heatmap
+                    plt.clf()
                     heatmap(cm.div(cm.sum(axis=1), axis=0).fillna(0), cmap="Blues")
                     plt.ylabel("True")
                     plt.xlabel("Predicted")

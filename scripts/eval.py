@@ -21,6 +21,7 @@ Evaluation script for the Argumentation Mining Transformer Module
 import argparse
 import logging
 import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 import mlflow
 import os
 import pandas as pd
@@ -30,6 +31,7 @@ import sys
 from datetime import datetime
 from huggingface_hub import list_models
 from pathlib import Path
+from seaborn import heatmap
 from sklearn.metrics import classification_report, confusion_matrix
 from tempfile import TemporaryDirectory
 from typing import Dict, Union
@@ -302,6 +304,16 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                         cm.to_string(fh)
                     mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt")
 
+                    # Normalized (by row or "true" values) heatmap
+                    heatmap(cm.div(cm.sum(axis=1), axis=0).fillna(0), cmap="Blues")
+                    plt.ylabel("True")
+                    plt.xlabel("Predicted")
+                    plt.savefig(
+                        f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png",
+                        bbox_inches="tight"
+                    )
+                    mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png")
+
                     predictions_file = f"predictions_step={checkpoint_step:05d}"
                     if config.task_type == "rel-class":
                         predictions_file += ".tsv"
@@ -330,6 +342,16 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 with open(f"{dh}/confusion_matrix.txt", "wt") as fh:
                     cm.to_string(fh)
                 mlflow.log_artifact(f"{dh}/confusion_matrix.txt")
+
+                # Normalized (by row or "true" values) heatmap
+                heatmap(cm.div(cm.sum(axis=1), axis=0).fillna(0), cmap="Blues")
+                plt.ylabel("True")
+                plt.xlabel("Predicted")
+                plt.savefig(
+                    f"{dh}/confusion_matrix.png",
+                    bbox_inches="tight"
+                )
+                mlflow.log_artifact(f"{dh}/confusion_matrix.png")
 
                 predictions_file = "predictions"
                 if config.task_type == "rel-class":

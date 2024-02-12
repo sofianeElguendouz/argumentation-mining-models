@@ -239,10 +239,6 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             label2id=data_module.label2id,
             config_name_or_path=config.config,
             cache_dir=config.cache_dir,
-            learning_rate=config.learning_rate,
-            weight_decay=config.weight_decay,
-            adam_epsilon=config.adam_epsilon,
-            warmup_steps=config.warmup_steps,
             classes_weights=data_module.classes_weights if config.weighted_loss else None,
             crf_loss=config.crf_loss
         )

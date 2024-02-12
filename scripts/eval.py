@@ -32,6 +32,7 @@ from datetime import datetime
 from huggingface_hub import list_models
 from pathlib import Path
 from seaborn import heatmap
+from seqeval.metrics import classification_report as seqeval_classification_report
 from sklearn.metrics import classification_report, confusion_matrix
 from tempfile import TemporaryDirectory
 from typing import Dict, Union
@@ -39,7 +40,8 @@ from typing import Dict, Union
 from am_transformer.data import RelationClassificationDataModule, SequenceTaggingDataModule
 from am_transformer.models import RelationClassificationTransformerModule, \
     SequenceTaggingTransformerModule
-from am_transformer.utils import compute_metrics, compute_seq_tag_labels_metrics
+from am_transformer.utils import compute_metrics, compute_seq_tag_labels_metrics, \
+    compute_seqeval_metrics
 
 
 # This is a list of models with an alias, but the script can use other models from Hugging Face
@@ -93,16 +95,16 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
     ]
 
     if config.task_type == 'rel-class':
-        # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
-        true_labels = []
-        pred_labels = []
-        for prediction in decoded_predictions:
-            true_labels.append(prediction[0])
-            pred_labels.append(prediction[1])
         if config.relevant_labels is not None:
             relevant_labels = config.relevant_labels
         else:
             relevant_labels = [lbl for lbl in data_module.label2id.keys() if lbl != 'noRel']
+        true_labels = []
+        pred_labels = []
+        for prediction in decoded_predictions:
+            # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
+            true_labels.append(prediction[0])
+            pred_labels.append(prediction[1])
         metrics = compute_metrics(
             true_labels, pred_labels,
             relevant_labels=relevant_labels,
@@ -110,18 +112,37 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         )
         metrics["predictions"] = '\n'.join(['\t'.join(pred) for pred in decoded_predictions])
     elif config.task_type == 'seq-tag':
-        # Predictions are a list of lists of tuples, where each tuple has the form
-        # (token, predicted_label, true_label)
-        true_labels = []
-        pred_labels = []
-        for sentence in decoded_predictions:
-            true_labels.extend([token[2] for token in sentence])
-            pred_labels.extend([token[1] for token in sentence])
         if config.relevant_labels is not None:
             relevant_labels = config.relevant_labels
         else:
             relevant_labels = [lbl for lbl in data_module.label2id.keys()
-                               if lbl not in {'X', 'PAD'}]
+                               if lbl not in {'O', 'X', 'PAD'}]
+        true_labels = []
+        pred_labels = []
+        true_seq_labels = []
+        pred_seq_labels = []
+        for sentence in decoded_predictions:
+            # Predictions are a list of lists of tuples, where each tuple has the form
+            # (token, predicted_label, true_label)
+            true = [token[2] for token in sentence]
+            pred = [token[1] for token in sentence]
+            # Some models might end up predicting 'PAD' or 'X' (i.e. the extra
+            # labels for masking/padding/special tokens), which can be messy
+            # when dealing with seqeval's way of evaluating (it expects a IOB
+            # type of label). The simpler solution in this case is just to set
+            # them up to 'O' labels, which is mainly the case anyways
+            pred = [p if p in relevant_labels else 'O' for p in pred]
+            # To calculate using seqeval, we need each sentence's true/predicted
+            # values as a single instance for evaluation (unlike when dealing
+            # with token level evaluation by IOB where each token is an instance
+            # for evaluation).  This is why we "extend" in case of token level
+            # evaluation and "append" for sentence level evaluation
+            # For more information check seqeval's documentation:
+            # https://github.com/chakki-works/seqeval
+            true_labels.extend(true)
+            pred_labels.extend(pred)
+            true_seq_labels.append(true)
+            pred_seq_labels.append(pred)
         metrics = compute_metrics(
             true_labels, pred_labels,
             relevant_labels=relevant_labels,
@@ -132,26 +153,22 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
             labels=list(data_module.label2id.keys()),
             prefix="eval"
         )
-        metrics = dict(**metrics, **seq_tag_metrics)
+        seqeval_metrics = compute_seqeval_metrics(
+            true_seq_labels, pred_seq_labels,
+            labels=list(data_module.label2id.keys()),
+            prefix="eval"
+        )
+        metrics = dict(**metrics, **seq_tag_metrics, **seqeval_metrics)
         metrics["predictions"] = '\n\n'.join(['\n'.join(['\t'.join(token) for token in sentence])
                                               for sentence in decoded_predictions])
+        metrics["seqeval_classification_report"] = seqeval_classification_report(
+            true_seq_labels, pred_seq_labels, zero_division=0
+        )
 
-    sorted_labels = [data_module.id2label[idx] for idx in sorted(data_module.id2label.keys())]
-    metrics["classification_report"] = classification_report(
-        true_labels, pred_labels,
-        # Remove the PAD label as it shouldn't be taken into consideration
-        labels=sorted_labels,
-        zero_division=0
-    )
-    metrics["classification_report_relevant"] = classification_report(
-        true_labels, pred_labels,
-        # Remove the PAD label as it shouldn't be taken into consideration
-        labels=[lbl for lbl in sorted_labels if lbl in relevant_labels],
-        zero_division=0
-    )
-    cm = confusion_matrix(
-        true_labels, pred_labels, labels=sorted_labels
-    )
+    sorted_labels = sorted(set(true_labels))
+    metrics["classification_report"] = classification_report(true_labels, pred_labels,
+                                                             labels=sorted_labels, zero_division=0)
+    cm = confusion_matrix(true_labels, pred_labels, labels=sorted_labels)
     metrics["confusion_matrix"] = pd.DataFrame(cm, index=sorted_labels, columns=sorted_labels)
 
     return metrics
@@ -186,7 +203,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     mlflow_uri = f"file://{config.output_dir.absolute().as_posix()}"
 
     if not config.eval_without_checkpoint:
-        # Try to fetch for a checkpoint to work with
+        # Try to fetch a checkpoint to work with
         mlflow_train_experiment_name = f"{config.task_type}/{model_name}/train"
         if config.experiment_name:
             mlflow_train_experiment_name += f"/{config.experiment_name}"
@@ -286,19 +303,19 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 checkpoint_step = int(checkpoint_step.group(0)) if checkpoint_step else None
                 model = TASKS[config.task_type][1].load_from_checkpoint(checkpoint_file)
                 metrics = evaluate_model(data_module, model, config, trainer)
-                classification_report = metrics.pop("classification_report")
-                classification_report_relevant = metrics.pop("classification_report_relevant")
+                clf_report = metrics.pop("classification_report")
+                seqeval_clf_report = metrics.pop("seqeval_classification_report")
                 cm = metrics.pop("confusion_matrix")
                 predictions = metrics.pop("predictions")
                 mlflow.log_metrics(metrics, step=checkpoint_step)
                 with TemporaryDirectory() as dh:
                     with open(f"{dh}/report_step={checkpoint_step:05d}.txt", "wt") as fh:
-                        print(classification_report, file=fh)
+                        print(clf_report, file=fh)
                     mlflow.log_artifact(f"{dh}/report_step={checkpoint_step:05d}.txt")
 
-                    with open(f"{dh}/relevant_report_step={checkpoint_step:05d}.txt", "wt") as fh:
-                        print(classification_report_relevant, file=fh)
-                    mlflow.log_artifact(f"{dh}/relevant_report_step={checkpoint_step:05d}.txt")
+                    with open(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt", "wt") as fh:
+                        print(seqeval_clf_report, file=fh)
+                    mlflow.log_artifact(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt")
 
                     with open(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt", "wt") as fh:
                         cm.to_string(fh)
@@ -326,19 +343,19 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         else:
             # Evaluate directly on the model
             metrics = evaluate_model(data_module, model_or_checkpoint, config, trainer)
-            classification_report = metrics.pop("classification_report")
-            classification_report_relevant = metrics.pop("classification_report_relevant")
+            clf_report = metrics.pop("classification_report")
+            seqeval_clf_report = metrics.pop("seqeval_classification_report")
             cm = metrics.pop("confusion_matrix")
             predictions = metrics.pop("predictions")
             mlflow.log_metrics(metrics)
             with TemporaryDirectory() as dh:
                 with open(f"{dh}/report.txt", "wt") as fh:
-                    print(classification_report, file=fh)
+                    print(clf_report, file=fh)
                 mlflow.log_artifact(f"{dh}/report.txt")
 
-                with open(f"{dh}/relevant_report.txt", "wt") as fh:
-                    print(classification_report_relevant, file=fh)
-                mlflow.log_artifact(f"{dh}/relevant_report.txt")
+                with open(f"{dh}/seqeval_report.txt", "wt") as fh:
+                    print(seqeval_clf_report, file=fh)
+                mlflow.log_artifact(f"{dh}/seqeval_report.txt")
 
                 with open(f"{dh}/confusion_matrix.txt", "wt") as fh:
                     cm.to_string(fh)

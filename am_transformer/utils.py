@@ -1,6 +1,6 @@
 """
 This module holds different types of utilities (functions and classes) for the
-ACTA library.
+Argumentation Mining Transformers library.
 
     Argumentation Mining Transformers Utilities Module
     Copyright (C) 2024 Cristian Cardellino

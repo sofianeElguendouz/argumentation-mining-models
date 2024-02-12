@@ -72,7 +72,7 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `acta.data.base.BaseDataModule` and it's children classes.
+        check `am_transformer.data.base.BaseDataModule` and it's children classes.
     model: LightningModule
         The model to be evaluated.
     config: Namespace
@@ -168,7 +168,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `acta.data.base.BaseDataModule` and it's children classes.
+        check `am_transformer.data.base.BaseDataModule` and it's children classes.
     config: Namespace
         The Namespace configuration that is parsed from the command line via
         argparse.

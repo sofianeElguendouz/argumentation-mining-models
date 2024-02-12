@@ -1,7 +1,7 @@
 """
-Annotation script for ACTA Module. Given a plain text file with the data to
-annotate it will run an annotation pipeline according to configuration
-arguments.
+Annotation script for Argumentation Mining Transformers. Given a plain text file
+with the data to annotate it will run an annotation pipeline according to
+configuration arguments.
 
    Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
 

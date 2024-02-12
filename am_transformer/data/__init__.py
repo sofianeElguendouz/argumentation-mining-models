@@ -1,5 +1,6 @@
 """
-Data utilities module. It has the Datasets and LightningDataModules of the ACTA library.
+Data utilities module. It has the Datasets and LightningDataModules of the
+Argumentation Mining Transformers library.
 """
 
 from .relation_classification import RelationClassificationDataModule

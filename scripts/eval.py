@@ -37,10 +37,10 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tempfile import TemporaryDirectory
 from typing import Dict, Union
 
-from am_transformer.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from am_transformer.models import RelationClassificationTransformerModule, \
+from amtm.data import RelationClassificationDataModule, SequenceTaggingDataModule
+from amtm.models import RelationClassificationTransformerModule, \
     SequenceTaggingTransformerModule
-from am_transformer.utils import compute_metrics, compute_seq_tag_labels_metrics, \
+from amtm.utils import compute_metrics, compute_seq_tag_labels_metrics, \
     compute_seqeval_metrics
 
 
@@ -74,7 +74,7 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `am_transformer.data.base.BaseDataModule` and it's children classes.
+        check `amtm.data.base.BaseDataModule` and it's children classes.
     model: LightningModule
         The model to be evaluated.
     config: Namespace
@@ -185,7 +185,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `am_transformer.data.base.BaseDataModule` and it's children classes.
+        check `amtm.data.base.BaseDataModule` and it's children classes.
     config: Namespace
         The Namespace configuration that is parsed from the command line via
         argparse.

@@ -31,8 +31,8 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from pathlib import Path
 
-from am_transformer.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from am_transformer.models import RelationClassificationTransformerModule, \
+from amtm.data import RelationClassificationDataModule, SequenceTaggingDataModule
+from amtm.models import RelationClassificationTransformerModule, \
     SequenceTaggingTransformerModule
 
 
@@ -63,11 +63,11 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
     data_module: LightningDataModule
         This is one of the possible Data Modules defined in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `am_transformer.data.base.BaseDataModule` and it's children classes.
+        check `amtm.data.base.BaseDataModule` and it's children classes.
     model: LightningModule
         This is one of the possible Lightning Modules in `TASKS`, either for
         relation classification or for sequence tagging. For more information
-        check `am_transformer.models.base.BaseTransformerModule` and it's children classes.
+        check `amtm.models.base.BaseTransformerModule` and it's children classes.
     config: Namespace
         The Namespace configuration that is parsed from the command line via
         argparse.

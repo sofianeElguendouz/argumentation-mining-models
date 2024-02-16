@@ -8,7 +8,7 @@ version = "0.3.0"
 authors = [
     { name="Cristian Cardellino", email="cristian.a.cardellino@inria.fr" },
 ]
-description = "Implementation of the 'Transformed-based Argument Mining' module"
+description = "Implementation of 'Transformed-based Argument Mining'"
 readme = "README.md"
 requires-python = ">=3.10.8"
 dynamic = ["dependencies", "optional-dependencies"]
@@ -22,7 +22,7 @@ Homepage = "https://github.com/crscardellino/argumentation-mining-transformers"
 Issues = "https://github.com/crscardellino/argumentation-mining-transformers/issues"
 
 [tool.setuptools.packages.find]
-include = ["am_transformer*"]
+include = ["amtm*"]
 exclude = ["*venv*", "*env*"]
 
 [tool.setuptools.dynamic]

@@ -80,7 +80,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         model_name = config.model
 
     # MLFlow Setup
-    mlflow_uri = f"file://{config.output_dir.absolute().as_posix()}"
+    mlflow_uri = config.output_dir.absolute().as_posix()
     mlflow_experiment_name = f"{config.task_type}/{model_name}/train"
     if config.experiment_name:  # Add experiment name as suffix
         mlflow_experiment_name += f"/{config.experiment_name}"

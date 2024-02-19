@@ -1,22 +1,25 @@
 """
 This module holds different types of utilities (functions and classes) for the
-ACTA library.
+Argumentation Mining Transformers library.
 
-   Copyright 2023 The ANTIDOTE Project Contributors <https://univ-cotedazur.eu/antidote>
+    Argumentation Mining Transformers Utilities Module
+    Copyright (C) 2024 Cristian Cardellino
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-       http://www.apache.org/licenses/LICENSE-2.0
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from seqeval.metrics import accuracy_score as seq_accuracy_score, f1_score as seq_f1_score
 from sklearn.metrics import accuracy_score, f1_score
 from typing import Dict, List, Optional, Union
 
@@ -119,6 +122,63 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
                                                     average='macro', zero_division=0)
         outputs[f'f1_score_micro_{lbl}'] = f1_score(true_labels, pred_labels, labels=lbl_group,
                                                     average='micro', zero_division=0)
+
+    if prefix:
+        outputs = {f"{prefix}_{metric}": value for metric, value in outputs.items()}
+
+    return outputs
+
+
+def compute_seqeval_metrics(true_labels: List[List[str]],
+                            pred_labels: List[List[str]],
+                            labels: List[str],
+                            prefix: Optional[str] = None) -> Dict[str, float]:
+    """
+    Computes metrics using `seqeval` as a library. These are metrics useful for
+    the case of Sequence Labelling, since they evaluate at a sentence level
+    (instead of a token level like classic metrics).
+
+    This function uses the `seqeval` library, for more information check:
+    https://github.com/chakki-works/seqeval
+
+    Parameters
+    ==========
+    true_labels: List[List[str]]
+        The ground truth labels. The format is IOB, must be strings.
+        It is a list of lists where each element is the list of labels of a
+        single sentence.
+    pred_labels: List[List[str]]
+        Analogous to `true_labels`, but with each element being a list of
+        predictions.
+    labels: List[str]
+        The list of unique labels.
+    prefix: Optional[str]
+        If given will prepend `<prefix>_` to the name of the metric. Useful to
+        check, for example, what was the split the metric was done in (e.g.
+        `eval_accuracy`).
+
+    Returns
+    =======
+    Dict[str, float]
+        A mapping between each of the metrics names (optionally with the
+        prepended prefix) and the metric value.
+    """
+    outputs = {
+        "seqeval_accuracy": seq_accuracy_score(true_labels, pred_labels),
+        "seqeval_f1_score_macro": seq_f1_score(true_labels, pred_labels,
+                                               average="macro", zero_division=0),
+        "seqeval_f1_score_micro": seq_f1_score(true_labels, pred_labels,
+                                               average="micro", zero_division=0)
+    }
+
+    # We take the relevant labels (i.e. those B-/I- labels) and sort them to
+    # match them to seqeval's output of non averaged scores
+    labels = sorted(set([
+        lbl.split('-', 1)[1] for lbl in labels if lbl.startswith('B-') or lbl.startswith('I-')
+    ]))
+    f1_score_per_label = seq_f1_score(true_labels, pred_labels, zero_division=0, average=None)
+    for lbl, score in zip(labels, f1_score_per_label):
+        outputs[f"seqeval_f1_score_{lbl}"] = score
 
     if prefix:
         outputs = {f"{prefix}_{metric}": value for metric, value in outputs.items()}

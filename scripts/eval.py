@@ -200,7 +200,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             if os.path.exists(hf_model_name_or_path) else hf_model_name_or_path
 
     # MLFlow Setup
-    mlflow_uri = config.output_dir.absolute().as_posix()
+    mlflow_uri = config.output_dir.absolute().as_uri()
 
     if not config.eval_without_checkpoint:
         # Try to fetch a checkpoint to work with

@@ -7,8 +7,9 @@ TEST_FILE=./data/neoplasm/test_relations.tsv
 VALIDATION_FILE=./data/neoplasm/dev_relations.tsv
 OUTPUT_DIR=./output
 TASK_TYPE=rel-class
-MODEL=bert
+MODEL=roberta
 EXPERIMENT_NAME="neoplasm"
+RUN_NAME="roberta-model"
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 
@@ -33,7 +34,7 @@ python ./scripts/train.py \
   --task-type $TASK_TYPE \
   --model $MODEL \
   --experiment-name "$EXPERIMENT_NAME" \
-  --validation \
+  --run-name "$RUN_NAME" \
   --labels $LABELS \
   --num-devices -1 \
   --num-workers -1 \
@@ -58,6 +59,7 @@ python ./scripts/eval.py \
   --task-type $TASK_TYPE \
   --model $MODEL \
   --experiment-name "$EXPERIMENT_NAME" \
+  --run-name "$RUN_NAME" \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \

@@ -7,6 +7,7 @@ OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=bert
 EXPERIMENT_NAME="neoplasm"
+RUN_NAME="bert-model"
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
@@ -20,6 +21,7 @@ python ./scripts/eval.py \
   --task-type $TASK_TYPE \
   --model $MODEL \
   --experiment-name "$EXPERIMENT_NAME" \
+  --run-name "$RUN_NAME" \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \

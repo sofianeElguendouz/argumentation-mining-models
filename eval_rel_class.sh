@@ -5,8 +5,9 @@ set -ex
 TEST_FILE=./data/neoplasm/test_relations.tsv
 OUTPUT_DIR=./output
 TASK_TYPE=rel-class
-MODEL=bert
+MODEL=roberta
 EXPERIMENT_NAME="neoplasm"
+RUN_NAME="roberta-model"
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 
@@ -20,6 +21,7 @@ python ./scripts/eval.py \
   --task-type $TASK_TYPE \
   --model $MODEL \
   --experiment-name "$EXPERIMENT_NAME" \
+  --run-name "$RUN_NAME" \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \

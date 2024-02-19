@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Evaluation script for the Argumentation Mining Transformer Module
 

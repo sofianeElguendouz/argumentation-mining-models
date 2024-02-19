@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Trainer script for the Argumentation Mining Transformer Module
 
@@ -104,7 +105,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
             "model_checkpoint": config.load_from_checkpoint or "N/A",
             "batch_size": config.batch_size,
             "epochs": config.epochs,
-            "early_stopping": config.early_stopping,
+            "early_stopping": config.early_stopping if config.validation else "N/A",
             "gradient_accumulation_steps": config.gradient_accumulation_steps,
             "max_grad_norm": config.max_grad_norm,
             "random_seed": config.random_seed,
@@ -123,7 +124,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
         )
         callbacks.append(model_checkpoints)
 
-        if config.early_stopping:
+        if config.early_stopping and config.validation:
             early_stopping = EarlyStopping(
                 monitor='val_loss',
                 min_delta=1e-6,
@@ -212,10 +213,6 @@ if __name__ == "__main__":
                         help="Suffix of MLFlow experiment.")
     parser.add_argument("--run-name",
                         help="Prefix of MLFlow run.")
-    parser.add_argument("--validation",
-                        action="store_true",
-                        help="If active, runs validation after `--log-every-n-steps` steps. "
-                             "Validation is useful for early stopping of the training process.")
     parser.add_argument("--labels",
                         default=None,
                         nargs="*",
@@ -321,14 +318,9 @@ if __name__ == "__main__":
     }
     if config.validation_data is not None:
         data_splits['validation'] = config.validation_data
-
-    if config.validation and 'validation' not in data_splits:
-        logger.error("There's no file for validation.")
-        sys.exit(1)
-
-    if config.early_stopping and 'validation' not in data_splits:
-        logger.error("There's no validation file for early stopping")
-        sys.exit(1)
+        config.validation = True
+    else:
+        config.validation = False
 
     config.num_devices = config.num_devices if config.num_devices > 0 else "auto"
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Script to update Artifacts Tracking URI for MLFlow.
 

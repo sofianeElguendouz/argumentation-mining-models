@@ -301,7 +301,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 model = TASKS[config.task_type][1].load_from_checkpoint(checkpoint_file)
                 metrics = evaluate_model(data_module, model, config, trainer)
                 clf_report = metrics.pop("classification_report")
-                seqeval_clf_report = metrics.pop("seqeval_classification_report")
+                seqeval_clf_report = metrics.pop("seqeval_classification_report", None)
                 cm = metrics.pop("confusion_matrix")
                 predictions = metrics.pop("predictions")
                 mlflow.log_metrics(metrics, step=checkpoint_step)
@@ -310,9 +310,11 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                         print(clf_report, file=fh)
                     mlflow.log_artifact(f"{dh}/report_step={checkpoint_step:05d}.txt")
 
-                    with open(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt", "wt") as fh:
-                        print(seqeval_clf_report, file=fh)
-                    mlflow.log_artifact(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt")
+                    if seqeval_clf_report:
+                        with open(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt",
+                                  "wt") as fh:
+                            print(seqeval_clf_report, file=fh)
+                        mlflow.log_artifact(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt")
 
                     with open(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.txt", "wt") as fh:
                         cm.to_string(fh)
@@ -341,7 +343,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             # Evaluate directly on the model
             metrics = evaluate_model(data_module, model_or_checkpoint, config, trainer)
             clf_report = metrics.pop("classification_report")
-            seqeval_clf_report = metrics.pop("seqeval_classification_report")
+            seqeval_clf_report = metrics.pop("seqeval_classification_report", None)
             cm = metrics.pop("confusion_matrix")
             predictions = metrics.pop("predictions")
             mlflow.log_metrics(metrics)
@@ -350,9 +352,10 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                     print(clf_report, file=fh)
                 mlflow.log_artifact(f"{dh}/report.txt")
 
-                with open(f"{dh}/seqeval_report.txt", "wt") as fh:
-                    print(seqeval_clf_report, file=fh)
-                mlflow.log_artifact(f"{dh}/seqeval_report.txt")
+                if seqeval_clf_report:
+                    with open(f"{dh}/seqeval_report.txt", "wt") as fh:
+                        print(seqeval_clf_report, file=fh)
+                    mlflow.log_artifact(f"{dh}/seqeval_report.txt")
 
                 with open(f"{dh}/confusion_matrix.txt", "wt") as fh:
                     cm.to_string(fh)

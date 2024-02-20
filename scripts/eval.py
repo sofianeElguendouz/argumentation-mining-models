@@ -256,6 +256,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     with mlflow.start_run(run_name=mlflow_run_name) as run:
         mlflow.log_params({
             "model_name": model_name,
+            "test_data": config.test_data,
             "train_experiment_name": mlflow_train_experiment_name,
             "train_experiment_id": mlflow_train_experiment_id,
             "train_experiment_run_id": mlflow_train_experiment_run_id,

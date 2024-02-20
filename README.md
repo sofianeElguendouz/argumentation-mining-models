@@ -92,7 +92,7 @@ with the development requirements as well:
     $ python -m venv amtm-venv
     $ source ./amtm-venv/bin/activate
     (amtm-venv) $ pip install --upgrade pip setuptools wheel
-    (atmt-venv) $ pip install -e ".[dev]"
+    (amtm-venv) $ pip install -e ".[dev]"
 
 ### Scripts for Traning and Evaluation
 

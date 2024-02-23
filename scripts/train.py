@@ -108,6 +108,7 @@ def train_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
             "early_stopping": config.early_stopping if config.validation else "N/A",
             "gradient_accumulation_steps": config.gradient_accumulation_steps,
             "max_grad_norm": config.max_grad_norm,
+            "max_seq_lenght": config.max_seq_length,
             "random_seed": config.random_seed,
             "weighted_loss": config.weighted_loss
         })

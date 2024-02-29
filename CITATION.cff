@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Cardellino
+    given-names: Cristian
+    orcid: https://orcid.org/0009-0000-1129-8330
+title: "Argumentation Mining Transformers Module (AMTM)"
+version: 1.0.1
+date-released: 2024-02-20

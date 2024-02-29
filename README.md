@@ -57,9 +57,9 @@ After that, you can install the AMTM library like:
 
     (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-<VERSION>
 
-Replacing `<VERSION>` with the version you want to install (>= 0.3.0). E.g.:
+Replacing `<VERSION>` with the version you want to install (>= 1.0.1-beta). E.g.:
 
-    (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-<VERSION>
+    (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-1.0.1-beta
 
 **Note:** This installation of the AMTM Library will only install what's under
 the `./amtm` directory so you can access it via `from acta import *` under your

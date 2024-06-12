@@ -467,6 +467,9 @@ if __name__ == "__main__":
                         action="store_true",
                         help="Only useful for Sequence Tagging trainings. "
                              "If true the loss function uses Conditional Random Fields.")
+    parser.add_argument("--add-prefix-space",
+                        action="store_true",
+                        help="Activate Roberta based models.")
     parser.add_argument("--fp16",
                         action="store_true",
                         help="Whether to use 16-bit (mixed) precision")
@@ -520,7 +523,7 @@ if __name__ == "__main__":
             cache_dir=config.cache_dir,
             do_lower_case=config.lower_case,
             use_fast=True,
-            add_prefix_space=True if hf_tokenizer_name_or_path == 'roberta-base' else False
+            add_prefix_space=config.add_prefix_space
         ),
         datasets_config=dict(
             max_seq_length=config.max_seq_length

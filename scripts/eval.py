@@ -260,7 +260,6 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     with mlflow.start_run(run_name=mlflow_run_name) as run:
         mlflow.log_params(
             {
-                "model_name": model_name,
                 "test_data": config.test_data,
                 "train_experiment_name": mlflow_train_experiment_name,
                 "train_experiment_id": mlflow_train_experiment_id,
@@ -394,16 +393,20 @@ if __name__ == "__main__":
         "--test-data",
         type=Path,
         required=True,
-        help="The evaluation dataset path. It should already be in the format "
-        "for the corresponding task (`--task-type`).",
+        help=(
+            "The evaluation dataset path. It should already be in the format "
+            "for the corresponding task (`--task-type`)."
+        ),
     )
     parser.add_argument(
         "--output-dir",
         required=True,
         type=Path,
-        help="The output directory where the model predictions will be stored. "
-        "In order to eval trained checkpoint, this should match the output "
-        "directory of the train script.",
+        help=(
+            "The output directory where the model predictions will be stored. "
+            "In order to eval trained checkpoint, this should match the output "
+            "directory of the train script."
+        ),
     )
     parser.add_argument(
         "--task-type",
@@ -414,10 +417,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model",
         required=True,
-        help="Either the name of one of the available models: "
-        f"{', '.join(MODELS.keys())}; or a Hugging Face model. "
-        "The HF model can be either a model available at the HF Hub, or "
-        "a model path.",
+        help=(
+            "Either the name of one of the available models: "
+            f"{', '.join(MODELS.keys())}; or a Hugging Face model. "
+            "The HF model can be either a model available at the HF Hub, or "
+            "a model path."
+        ),
     )
     parser.add_argument(
         "--config", help="Pretrained config name or path (if not the same as `model`)."
@@ -439,16 +444,20 @@ if __name__ == "__main__":
         "--labels",
         default=None,
         nargs="*",
-        help="The list of labels (separated by spaces) for the task. "
-        "If not given it will fallback to the default labels for the task.",
+        help=(
+            "The list of labels (separated by spaces) for the task. "
+            "If not given it will fallback to the default labels for the task."
+        ),
     )
     parser.add_argument(
         "--relevant-labels",
         default=None,
         nargs="*",
-        help="The list of relevant labels for the task, so it will calculate "
-        "the metrics with these relevant labels in consideration. If not "
-        "given it will fall back to the relevant labels for the task.",
+        help=(
+            "The list of relevant labels for the task, so it will calculate "
+            "the metrics with these relevant labels in consideration. If not "
+            "given it will fall back to the relevant labels for the task."
+        ),
     )
     parser.add_argument(
         "--accelerator",
@@ -465,11 +474,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-seq-length",
         type=int,
-        help="The maximum total input sequence length after tokenization."
-        "Sequences longer than this will be truncated, "
-        "sequences shorter will be padded. "
-        "If left empty it will truncate to the model's max size and pad to "
-        "the maximum size of each training step.",
+        help=(
+            "The maximum total input sequence length after tokenization."
+            "Sequences longer than this will be truncated, "
+            "sequences shorter will be padded. "
+            "If left empty it will truncate to the model's max size and pad to "
+            "the maximum size of each training step."
+        ),
     )
     parser.add_argument(
         "--lower-case", action="store_true", help="Should be active for lowercase transformers."
@@ -483,8 +494,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--weighted-loss",
         action="store_true",
-        help="Only useful for Relationship Classification trainings. "
-        "If true the loss function is weighted inversely by class.",
+        help=(
+            "Only useful for Relationship Classification trainings. "
+            "If true the loss function is weighted inversely by class."
+        ),
     )
     parser.add_argument(
         "--add-prefix-space", action="store_true", help="Activate for Roberta based tokenizers."
@@ -496,7 +509,7 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.DEBUG if config.debug else logging.INFO,
     )

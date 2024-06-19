@@ -62,45 +62,50 @@ class RelationClassificationDataset(BaseDataset):
     label_prefix: str
         A prefix to be removed from the label2id in the dataset.
     """
-    def __init__(self,
-                 tokenizer: AutoTokenizer,
-                 path_to_dataset: str,
-                 label2id: Optional[Dict[str, int]] = None,
-                 id2label: Optional[Dict[int, str]] = None,
-                 max_seq_length: Optional[int] = None,
-                 truncation_strategy: str = 'longest_first',
-                 delimiter: str = '\t',
-                 quotechar: str = '"',
-                 label_prefix: str = '__label__',
-                 **kwargs):
-        super().__init__(tokenizer=tokenizer,
-                         path_to_dataset=path_to_dataset,
-                         label2id=label2id, id2label=id2label,
-                         max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
-                         delimiter=delimiter, quotechar=quotechar,
-                         label_prefix=label_prefix, **kwargs)
 
-    def _load_dataset(self,
-                      path_to_dataset: str,
-                      delimiter: str = '\t',
-                      quotechar: str = '"',
-                      label_prefix: str = '__label__',
-                      **kwargs):
-        with open(path_to_dataset, 'rt') as fh:
-            if delimiter == '\t':
+    def __init__(
+        self,
+        tokenizer: AutoTokenizer,
+        path_to_dataset: str,
+        label2id: Optional[Dict[str, int]] = None,
+        id2label: Optional[Dict[int, str]] = None,
+        max_seq_length: Optional[int] = None,
+        truncation_strategy: str = "longest_first",
+        delimiter: str = "\t",
+        quotechar: str = '"',
+        label_prefix: str = "__label__",
+        **kwargs,
+    ):
+        super().__init__(
+            tokenizer=tokenizer,
+            path_to_dataset=path_to_dataset,
+            label2id=label2id,
+            id2label=id2label,
+            max_seq_length=max_seq_length,
+            truncation_strategy=truncation_strategy,
+            delimiter=delimiter,
+            quotechar=quotechar,
+            label_prefix=label_prefix,
+            **kwargs,
+        )
+
+    def _load_dataset(
+        self,
+        path_to_dataset: str,
+        delimiter: str = "\t",
+        quotechar: str = '"',
+        label_prefix: str = "__label__",
+        **kwargs,
+    ):
+        with open(path_to_dataset, "rt") as fh:
+            if delimiter == "\t":
                 # Don't quote for the case of TSV files
                 csv_reader = csv.reader(fh, delimiter=delimiter, quoting=csv.QUOTE_NONE)
             else:
                 csv_reader = csv.reader(fh, delimiter=delimiter, quotechar=quotechar)
             dataset = list(csv_reader)
 
-        self.dataset = [
-            {
-                "text": d[1],
-                "text_pair": d[2]
-            }
-            for d in dataset
-        ]
+        self.dataset = [{"text": d[1], "text_pair": d[2]} for d in dataset]
 
         target = [d[0].lstrip(label_prefix) for d in dataset]
         if self.label2id is None:
@@ -115,23 +120,24 @@ class RelationClassificationDataset(BaseDataset):
         data = self.dataset[idx]
 
         if isinstance(idx, slice):
-            text = [d['text'] for d in data]
-            text_pair = [d['text_pair'] for d in data]
+            text = [d["text"] for d in data]
+            text_pair = [d["text_pair"] for d in data]
             tokenized_data = self.tokenizer(
-                text=text, text_pair=text_pair,
-                padding='max_length' if self.max_seq_length else True,
+                text=text,
+                text_pair=text_pair,
+                padding="max_length" if self.max_seq_length else True,
                 truncation=self.truncation_strategy,
-                max_length=self.max_seq_length
+                max_length=self.max_seq_length,
             )
         else:
             tokenized_data = self.tokenizer(
                 **data,
-                padding='max_length' if self.max_seq_length else False,
+                padding="max_length" if self.max_seq_length else False,
                 truncation=self.truncation_strategy,
-                max_length=self.max_seq_length
+                max_length=self.max_seq_length,
             )
 
-        tokenized_data['label'] = self.target[idx]
+        tokenized_data["label"] = self.target[idx]
 
         return tokenized_data
 
@@ -141,11 +147,8 @@ class RelationClassificationDataModule(BaseDataModule):
     Data module for classification of relationship between a pairs of sentences
     (e.g. supports, attacks, etc.).
     """
-    LABELS = [
-        "noRel",
-        "Support",
-        "Attack"
-    ]
+
+    LABELS = ["noRel", "Support", "Attack"]
 
     @property
     def classes_weights(self) -> List[float]:
@@ -163,9 +166,9 @@ class RelationClassificationDataModule(BaseDataModule):
         if len(self.datasets) == 0:
             raise ValueError("The datasets are not present. Please run `setup`.")
 
-        if 'train' in self.datasets:
+        if "train" in self.datasets:
             # First try with the training dataset
-            target = self.datasets['train'].target
+            target = self.datasets["train"].target
         elif self.evaluation_split in self.datasets:
             # Check the evaluation dataset
             target = self.datasets[self.evaluation_split].target
@@ -180,11 +183,12 @@ class RelationClassificationDataModule(BaseDataModule):
     def collate_fn(self) -> Callable:
         return DataCollatorWithPadding(self.tokenizer)
 
-    def decode_predictions(self,
-                           input_ids: Union[List[int], List[List[int]]],
-                           predictions: Union[int, List[int]],
-                           labels: Union[int, List[int], None] = None)\
-            -> Union[Tuple[str], List[Tuple[str]]]:
+    def decode_predictions(
+        self,
+        input_ids: Union[List[int], List[List[int]]],
+        predictions: Union[int, List[int]],
+        labels: Union[int, List[int], None] = None,
+    ) -> Union[Tuple[str], List[Tuple[str]]]:
         """
         Decodes the input_ids, which can be a single instance (List[int]) or a
         batch of instances (List[List[int]]) into its corresponding pair of
@@ -213,12 +217,10 @@ class RelationClassificationDataModule(BaseDataModule):
         if isinstance(input_ids[0], int):
             # Single input
             sentence1 = self.tokenizer.decode(
-                input_ids[:input_ids.index(self.tokenizer.sep_token_id)],
-                skip_special_tokens=True
+                input_ids[: input_ids.index(self.tokenizer.sep_token_id)], skip_special_tokens=True
             )
             sentence2 = self.tokenizer.decode(
-                input_ids[input_ids.index(self.tokenizer.sep_token_id):],
-                skip_special_tokens=True
+                input_ids[input_ids.index(self.tokenizer.sep_token_id) :], skip_special_tokens=True
             )
             predicted_label = self.id2label[predictions]
             if labels is not None:
@@ -230,23 +232,33 @@ class RelationClassificationDataModule(BaseDataModule):
             # Batch of inputs
             if labels is None:
                 return [
-                    (self.id2label[prediction],
-                     self.tokenizer.decode(input_id[:input_id.index(self.tokenizer.sep_token_id)],
-                                           skip_special_tokens=True),
-                     self.tokenizer.decode(input_id[input_id.index(self.tokenizer.sep_token_id):],
-                                           skip_special_tokens=True)
-                     )
+                    (
+                        self.id2label[prediction],
+                        self.tokenizer.decode(
+                            input_id[: input_id.index(self.tokenizer.sep_token_id)],
+                            skip_special_tokens=True,
+                        ),
+                        self.tokenizer.decode(
+                            input_id[input_id.index(self.tokenizer.sep_token_id) :],
+                            skip_special_tokens=True,
+                        ),
+                    )
                     for prediction, input_id in zip(predictions, input_ids)
                 ]
             else:
                 return [
-                    (self.id2label[label],
-                     self.id2label[prediction],
-                     self.tokenizer.decode(input_id[:input_id.index(self.tokenizer.sep_token_id)],
-                                           skip_special_tokens=True),
-                     self.tokenizer.decode(input_id[input_id.index(self.tokenizer.sep_token_id):],
-                                           skip_special_tokens=True)
-                     )
+                    (
+                        self.id2label[label],
+                        self.id2label[prediction],
+                        self.tokenizer.decode(
+                            input_id[: input_id.index(self.tokenizer.sep_token_id)],
+                            skip_special_tokens=True,
+                        ),
+                        self.tokenizer.decode(
+                            input_id[input_id.index(self.tokenizer.sep_token_id) :],
+                            skip_special_tokens=True,
+                        ),
+                    )
                     for label, prediction, input_id in zip(labels, predictions, input_ids)
                 ]
 
@@ -258,5 +270,5 @@ class RelationClassificationDataModule(BaseDataModule):
             tokenizer=self.tokenizer,
             path_to_dataset=path_to_dataset,
             label2id=self.labels,
-            **self.datasets_config
+            **self.datasets_config,
         )

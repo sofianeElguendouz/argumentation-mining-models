@@ -24,10 +24,12 @@ from sklearn.metrics import accuracy_score, f1_score
 from typing import Dict, List, Optional, Union
 
 
-def compute_metrics(true_labels: List[Union[int, str]],
-                    pred_labels: List[Union[int, str]],
-                    relevant_labels: Optional[List[Union[int, str]]] = None,
-                    prefix: Optional[str] = None) -> Dict[str, float]:
+def compute_metrics(
+    true_labels: List[Union[int, str]],
+    pred_labels: List[Union[int, str]],
+    relevant_labels: Optional[List[Union[int, str]]] = None,
+    prefix: Optional[str] = None,
+) -> Dict[str, float]:
     """
     Function to compute accuracy and F1-score, macro and micro averaged, with the
     option to limit the F1-score only to relevant labels.
@@ -58,7 +60,7 @@ def compute_metrics(true_labels: List[Union[int, str]],
     outputs = {
         "accuracy": accuracy_score(true_labels, pred_labels),
         "f1_score_macro": f1_score(true_labels, pred_labels, average="macro", zero_division=0),
-        "f1_score_micro": f1_score(true_labels, pred_labels, average="micro", zero_division=0)
+        "f1_score_micro": f1_score(true_labels, pred_labels, average="micro", zero_division=0),
     }
 
     if relevant_labels is not None:
@@ -76,10 +78,9 @@ def compute_metrics(true_labels: List[Union[int, str]],
     return outputs
 
 
-def compute_seq_tag_labels_metrics(true_labels: List[str],
-                                   pred_labels: List[str],
-                                   labels: List[str],
-                                   prefix: Optional[str] = None) -> Dict[str, float]:
+def compute_seq_tag_labels_metrics(
+    true_labels: List[str], pred_labels: List[str], labels: List[str], prefix: Optional[str] = None
+) -> Dict[str, float]:
     """
     Function to compute F1-score, macro and micro averaged for groups of labels
     in sequence tagging. This calculates the labels that have the same root
@@ -109,19 +110,19 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
     """
 
     unique_labels = {
-        lbl.split('-', 1)[1] for lbl in labels if lbl.startswith('B-') or lbl.startswith('I-')
+        lbl.split("-", 1)[1] for lbl in labels if lbl.startswith("B-") or lbl.startswith("I-")
     }
-    labels_groups = {
-        lbl: [f'B-{lbl}', f'I-{lbl}'] for lbl in unique_labels
-    }
+    labels_groups = {lbl: [f"B-{lbl}", f"I-{lbl}"] for lbl in unique_labels}
 
     outputs = {}
 
     for lbl, lbl_group in labels_groups.items():
-        outputs[f'f1_score_macro_{lbl}'] = f1_score(true_labels, pred_labels, labels=lbl_group,
-                                                    average='macro', zero_division=0)
-        outputs[f'f1_score_micro_{lbl}'] = f1_score(true_labels, pred_labels, labels=lbl_group,
-                                                    average='micro', zero_division=0)
+        outputs[f"f1_score_macro_{lbl}"] = f1_score(
+            true_labels, pred_labels, labels=lbl_group, average="macro", zero_division=0
+        )
+        outputs[f"f1_score_micro_{lbl}"] = f1_score(
+            true_labels, pred_labels, labels=lbl_group, average="micro", zero_division=0
+        )
 
     if prefix:
         outputs = {f"{prefix}_{metric}": value for metric, value in outputs.items()}
@@ -129,10 +130,12 @@ def compute_seq_tag_labels_metrics(true_labels: List[str],
     return outputs
 
 
-def compute_seqeval_metrics(true_labels: List[List[str]],
-                            pred_labels: List[List[str]],
-                            labels: List[str],
-                            prefix: Optional[str] = None) -> Dict[str, float]:
+def compute_seqeval_metrics(
+    true_labels: List[List[str]],
+    pred_labels: List[List[str]],
+    labels: List[str],
+    prefix: Optional[str] = None,
+) -> Dict[str, float]:
     """
     Computes metrics using `seqeval` as a library. These are metrics useful for
     the case of Sequence Labelling, since they evaluate at a sentence level
@@ -165,17 +168,21 @@ def compute_seqeval_metrics(true_labels: List[List[str]],
     """
     outputs = {
         "seqeval_accuracy": seq_accuracy_score(true_labels, pred_labels),
-        "seqeval_f1_score_macro": seq_f1_score(true_labels, pred_labels,
-                                               average="macro", zero_division=0),
-        "seqeval_f1_score_micro": seq_f1_score(true_labels, pred_labels,
-                                               average="micro", zero_division=0)
+        "seqeval_f1_score_macro": seq_f1_score(
+            true_labels, pred_labels, average="macro", zero_division=0
+        ),
+        "seqeval_f1_score_micro": seq_f1_score(
+            true_labels, pred_labels, average="micro", zero_division=0
+        ),
     }
 
     # We take the relevant labels (i.e. those B-/I- labels) and sort them to
     # match them to seqeval's output of non averaged scores
-    labels = sorted(set([
-        lbl.split('-', 1)[1] for lbl in labels if lbl.startswith('B-') or lbl.startswith('I-')
-    ]))
+    labels = sorted(
+        set(
+            [lbl.split("-", 1)[1] for lbl in labels if lbl.startswith("B-") or lbl.startswith("I-")]
+        )
+    )
     f1_score_per_label = seq_f1_score(true_labels, pred_labels, zero_division=0, average=None)
     for lbl, score in zip(labels, f1_score_per_label):
         outputs[f"seqeval_f1_score_{lbl}"] = score

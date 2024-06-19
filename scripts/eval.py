@@ -39,32 +39,33 @@ from tempfile import TemporaryDirectory
 from typing import Dict, Union
 
 from amtm.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from amtm.models import RelationClassificationTransformerModule, \
-    SequenceTaggingTransformerModule
-from amtm.utils import compute_metrics, compute_seq_tag_labels_metrics, \
-    compute_seqeval_metrics
+from amtm.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
+from amtm.utils import compute_metrics, compute_seq_tag_labels_metrics, compute_seqeval_metrics
 
 
 # This is a list of models with an alias, but the script can use other models from Hugging Face
 MODELS = {
-    'bert': 'bert-base-uncased',
-    'deberta-v3': 'microsoft/deberta-v3-base',
-    'roberta': 'roberta-base',
-    'tiny-bert': 'prajjwal1/bert-tiny'  # Useful for debug purposes
+    "bert": "bert-base-uncased",
+    "deberta-v3": "microsoft/deberta-v3-base",
+    "roberta": "roberta-base",
+    "tiny-bert": "prajjwal1/bert-tiny",  # Useful for debug purposes
 }
 
 # Available tasks to work with
 TASKS = {
-    'rel-class': (RelationClassificationDataModule, RelationClassificationTransformerModule, 'tsv'),
-    'seq-tag': (SequenceTaggingDataModule, SequenceTaggingTransformerModule, 'conll')
+    "rel-class": (RelationClassificationDataModule, RelationClassificationTransformerModule, "tsv"),
+    "seq-tag": (SequenceTaggingDataModule, SequenceTaggingTransformerModule, "conll"),
 }
 
 logger = logging.getLogger(__name__)
 
 
-def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModule,
-                   config: argparse.Namespace, trainer: pl.Trainer)\
-                       -> Dict[str, Union[float, str]]:
+def evaluate_model(
+    data_module: pl.LightningDataModule,
+    model: pl.LightningModule,
+    config: argparse.Namespace,
+    trainer: pl.Trainer,
+) -> Dict[str, Union[float, str]]:
     """
     Evaluates a single model and returns the results as a dictionary. The
     dictionary has different metrics, the classification report and the string
@@ -95,11 +96,11 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
         for decoded_prediction in data_module.decode_predictions(**batch_prediction)
     ]
 
-    if config.task_type == 'rel-class':
+    if config.task_type == "rel-class":
         if config.relevant_labels is not None:
             relevant_labels = config.relevant_labels
         else:
-            relevant_labels = [lbl for lbl in data_module.label2id.keys() if lbl != 'noRel']
+            relevant_labels = [lbl for lbl in data_module.label2id.keys() if lbl != "noRel"]
         true_labels = []
         pred_labels = []
         for prediction in decoded_predictions:
@@ -107,17 +108,16 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
             true_labels.append(prediction[0])
             pred_labels.append(prediction[1])
         metrics = compute_metrics(
-            true_labels, pred_labels,
-            relevant_labels=relevant_labels,
-            prefix="eval"
+            true_labels, pred_labels, relevant_labels=relevant_labels, prefix="eval"
         )
-        metrics["predictions"] = '\n'.join(['\t'.join(pred) for pred in decoded_predictions])
-    elif config.task_type == 'seq-tag':
+        metrics["predictions"] = "\n".join(["\t".join(pred) for pred in decoded_predictions])
+    elif config.task_type == "seq-tag":
         if config.relevant_labels is not None:
             relevant_labels = config.relevant_labels
         else:
-            relevant_labels = [lbl for lbl in data_module.label2id.keys()
-                               if lbl not in {'O', 'X', 'PAD'}]
+            relevant_labels = [
+                lbl for lbl in data_module.label2id.keys() if lbl not in {"O", "X", "PAD"}
+            ]
         true_labels = []
         pred_labels = []
         true_seq_labels = []
@@ -132,7 +132,7 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
             # when dealing with seqeval's way of evaluating (it expects a IOB
             # type of label). The simpler solution in this case is just to set
             # them up to 'O' labels, which is mainly the case anyways
-            pred = [p if p in relevant_labels else 'O' for p in pred]
+            pred = [p if p in relevant_labels else "O" for p in pred]
             # To calculate using seqeval, we need each sentence's true/predicted
             # values as a single instance for evaluation (unlike when dealing
             # with token level evaluation by IOB where each token is an instance
@@ -145,30 +145,32 @@ def evaluate_model(data_module: pl.LightningDataModule, model: pl.LightningModul
             true_seq_labels.append(true)
             pred_seq_labels.append(pred)
         metrics = compute_metrics(
-            true_labels, pred_labels,
-            relevant_labels=relevant_labels,
-            prefix="eval"
+            true_labels, pred_labels, relevant_labels=relevant_labels, prefix="eval"
         )
         seq_tag_metrics = compute_seq_tag_labels_metrics(
-            true_labels, pred_labels,
-            labels=list(data_module.label2id.keys()),
-            prefix="eval"
+            true_labels, pred_labels, labels=list(data_module.label2id.keys()), prefix="eval"
         )
         seqeval_metrics = compute_seqeval_metrics(
-            true_seq_labels, pred_seq_labels,
+            true_seq_labels,
+            pred_seq_labels,
             labels=list(data_module.label2id.keys()),
-            prefix="eval"
+            prefix="eval",
         )
         metrics = dict(**metrics, **seq_tag_metrics, **seqeval_metrics)
-        metrics["predictions"] = '\n\n'.join(['\n'.join(['\t'.join(token) for token in sentence])
-                                              for sentence in decoded_predictions])
+        metrics["predictions"] = "\n\n".join(
+            [
+                "\n".join(["\t".join(token) for token in sentence])
+                for sentence in decoded_predictions
+            ]
+        )
         metrics["seqeval_classification_report"] = seqeval_classification_report(
             true_seq_labels, pred_seq_labels, zero_division=0
         )
 
     sorted_labels = sorted(set(true_labels))
-    metrics["classification_report"] = classification_report(true_labels, pred_labels,
-                                                             labels=sorted_labels, zero_division=0)
+    metrics["classification_report"] = classification_report(
+        true_labels, pred_labels, labels=sorted_labels, zero_division=0
+    )
     cm = confusion_matrix(true_labels, pred_labels, labels=sorted_labels)
     metrics["confusion_matrix"] = pd.DataFrame(cm, index=sorted_labels, columns=sorted_labels)
 
@@ -197,8 +199,11 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         model_name = config.model
     else:
         hf_model_name_or_path = config.model
-        model_name = os.path.basename(hf_model_name_or_path)\
-            if os.path.exists(hf_model_name_or_path) else hf_model_name_or_path
+        model_name = (
+            os.path.basename(hf_model_name_or_path)
+            if os.path.exists(hf_model_name_or_path)
+            else hf_model_name_or_path
+        )
 
     # MLFlow Setup
     mlflow_uri = config.output_dir.absolute().as_uri()
@@ -216,8 +221,8 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         mlflow_train_experiment_id = mlflow_train_experiment.experiment_id
         runs = mlflow_client.search_runs(
             experiment_ids=[mlflow_train_experiment_id],
-            filter_string=f"run_name LIKE '{config.run_name}%'" if config.run_name else '',
-            order_by=['start_time DESC']
+            filter_string=f"run_name LIKE '{config.run_name}%'" if config.run_name else "",
+            order_by=["start_time DESC"],
         )
         if not runs:
             logger.error(f"There's no runs for experiment: {mlflow_train_experiment_name}")
@@ -225,7 +230,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         run = runs[0]
         mlflow_train_experiment_run_id = run.info.run_id
         mlflow_train_experiment_run_name = run.info.run_name
-        model_or_checkpoint = run.data.tags['finalCheckpointPath']
+        model_or_checkpoint = run.data.tags["finalCheckpointPath"]
         if not os.path.exists(model_or_checkpoint):
             logger.error(f"The checkpoint file {model_or_checkpoint} doesn't exist.")
             sys.exit(1)
@@ -253,15 +258,17 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
     mlflow.set_experiment(mlflow_experiment_name)
 
     with mlflow.start_run(run_name=mlflow_run_name) as run:
-        mlflow.log_params({
-            "model_name": model_name,
-            "test_data": config.test_data,
-            "train_experiment_name": mlflow_train_experiment_name,
-            "train_experiment_id": mlflow_train_experiment_id,
-            "train_experiment_run_id": mlflow_train_experiment_run_id,
-            "train_experiment_run_name": mlflow_train_experiment_run_name,
-            "random_seed": config.random_seed
-        })
+        mlflow.log_params(
+            {
+                "model_name": model_name,
+                "test_data": config.test_data,
+                "train_experiment_name": mlflow_train_experiment_name,
+                "train_experiment_id": mlflow_train_experiment_id,
+                "train_experiment_run_id": mlflow_train_experiment_run_id,
+                "train_experiment_run_name": mlflow_train_experiment_run_name,
+                "random_seed": config.random_seed,
+            }
+        )
 
         if isinstance(model_or_checkpoint, str):
             # Add a link in the run description pointing to the training experiment run
@@ -272,13 +279,13 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
         trainer = pl.Trainer(
             accelerator=config.accelerator,
             devices=1,
-            precision='16-mixed' if config.fp16 else '32-true',
+            precision="16-mixed" if config.fp16 else "32-true",
             logger=False,
             max_epochs=1,
             max_steps=-1,
             limit_test_batches=0.1 if config.debug else 1.0,
             limit_predict_batches=0.1 if config.debug else 1.0,
-            num_sanity_val_steps=0
+            num_sanity_val_steps=0,
         )
 
         if isinstance(model_or_checkpoint, str):
@@ -288,8 +295,10 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 logger.error(f"The checkpoint file '{model_or_checkpoint}' doesn't have a step.")
                 sys.exit(1)
             for checkpoint_file in sorted(Path(checkpoints_path).glob("*.ckpt")):
-                if not config.eval_all_checkpoints and\
-                        checkpoint_file.as_posix() != model_or_checkpoint:
+                if (
+                    not config.eval_all_checkpoints
+                    and checkpoint_file.as_posix() != model_or_checkpoint
+                ):
                     # Ignore other checkpoints since we only care about the last one
                     continue
                 checkpoint_step = re.search(r"(?<=step=)\d+", checkpoint_file.name)
@@ -311,8 +320,9 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                     mlflow.log_artifact(f"{dh}/report_step={checkpoint_step:05d}.txt")
 
                     if seqeval_clf_report:
-                        with open(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt",
-                                  "wt") as fh:
+                        with open(
+                            f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt", "wt"
+                        ) as fh:
                             print(seqeval_clf_report, file=fh)
                         mlflow.log_artifact(f"{dh}/seqeval_report_step={checkpoint_step:05d}.txt")
 
@@ -326,8 +336,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                     plt.ylabel("True")
                     plt.xlabel("Predicted")
                     plt.savefig(
-                        f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png",
-                        bbox_inches="tight"
+                        f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png", bbox_inches="tight"
                     )
                     mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png")
 
@@ -365,10 +374,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 heatmap(cm.div(cm.sum(axis=1), axis=0).fillna(0), cmap="Blues")
                 plt.ylabel("True")
                 plt.xlabel("Predicted")
-                plt.savefig(
-                    f"{dh}/confusion_matrix.png",
-                    bbox_inches="tight"
-                )
+                plt.savefig(f"{dh}/confusion_matrix.png", bbox_inches="tight")
                 mlflow.log_artifact(f"{dh}/confusion_matrix.png")
 
                 predictions_file = "predictions"
@@ -384,93 +390,109 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--test-data",
-                        type=Path,
-                        required=True,
-                        help="The evaluation dataset path. It should already be in the format "
-                             "for the corresponding task (`--task-type`).")
-    parser.add_argument("--output-dir",
-                        required=True,
-                        type=Path,
-                        help="The output directory where the model predictions will be stored. "
-                             "In order to eval trained checkpoint, this should match the output "
-                             "directory of the train script.")
-    parser.add_argument("--task-type",
-                        choices=TASKS.keys(),
-                        required=True,
-                        help=f"Type of task. Use one of: {', '.join(TASKS.keys())}")
-    parser.add_argument("--model",
-                        required=True,
-                        help="Either the name of one of the available models: "
-                             f"{', '.join(MODELS.keys())}; or a Hugging Face model. "
-                             "The HF model can be either a model available at the HF Hub, or "
-                             "a model path.")
-    parser.add_argument("--config",
-                        help="Pretrained config name or path (if not the same as `model`).")
-    parser.add_argument("--tokenizer",
-                        help="Pretrained tokenizer name or path (if not the same as `model`).")
-    parser.add_argument("--cache-dir",
-                        default="./cache",
-                        help="Directory for Hugging Face downloaded models.")
-    parser.add_argument("--eval-without-checkpoint",
-                        action="store_true",
-                        help="If active, it will evaluate the model directly from HF hub.")
-    parser.add_argument("--experiment-name",
-                        help="Suffix of MLFlow experiment.")
-    parser.add_argument("--run-name",
-                        help="Prefix of MLFlow run.")
-    parser.add_argument("--labels",
-                        default=None,
-                        nargs="*",
-                        help="The list of labels (separated by spaces) for the task. "
-                             "If not given it will fallback to the default labels for the task.")
-    parser.add_argument("--relevant-labels",
-                        default=None,
-                        nargs="*",
-                        help="The list of relevant labels for the task, so it will calculate "
-                             "the metrics with these relevant labels in consideration. If not "
-                             "given it will fall back to the relevant labels for the task.")
-    parser.add_argument("--accelerator",
-                        default="auto",
-                        help="What device to use as accelerator (cpu, gpu, tpu, etc).")
-    parser.add_argument("--num-workers",
-                        default=-1,
-                        type=int,
-                        help="Number of workers to use for DataLoaders. Set to -1 to use all cpus.")
-    parser.add_argument("--batch-size",
-                        default=32,
-                        type=int,
-                        help="Batch size for evaluation.")
-    parser.add_argument("--max-seq-length",
-                        type=int,
-                        help="The maximum total input sequence length after tokenization."
-                             "Sequences longer than this will be truncated, "
-                             "sequences shorter will be padded. "
-                             "If left empty it will truncate to the model's max size and pad to "
-                             "the maximum size of each training step.")
-    parser.add_argument("--lower-case",
-                        action="store_true",
-                        help="Should be active for lowercase transformers.")
-    parser.add_argument("--eval-all-checkpoints",
-                        action="store_true",
-                        help="Evaluate all checkpoints for the model.")
-    parser.add_argument("--random-seed",
-                        default=42,
-                        type=int,
-                        help="Initial random seed.")
-    parser.add_argument("--weighted-loss",
-                        action="store_true",
-                        help="Only useful for Relationship Classification trainings. "
-                             "If true the loss function is weighted inversely by class.")
-    parser.add_argument("--add-prefix-space",
-                        action="store_true",
-                        help="Activate for Roberta based tokenizers.")
-    parser.add_argument("--fp16",
-                        action="store_true",
-                        help="Whether to use 16-bit (mixed) precision")
-    parser.add_argument("--debug",
-                        action="store_true",
-                        help="Set for debug mode.")
+    parser.add_argument(
+        "--test-data",
+        type=Path,
+        required=True,
+        help="The evaluation dataset path. It should already be in the format "
+        "for the corresponding task (`--task-type`).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        type=Path,
+        help="The output directory where the model predictions will be stored. "
+        "In order to eval trained checkpoint, this should match the output "
+        "directory of the train script.",
+    )
+    parser.add_argument(
+        "--task-type",
+        choices=TASKS.keys(),
+        required=True,
+        help=f"Type of task. Use one of: {', '.join(TASKS.keys())}",
+    )
+    parser.add_argument(
+        "--model",
+        required=True,
+        help="Either the name of one of the available models: "
+        f"{', '.join(MODELS.keys())}; or a Hugging Face model. "
+        "The HF model can be either a model available at the HF Hub, or "
+        "a model path.",
+    )
+    parser.add_argument(
+        "--config", help="Pretrained config name or path (if not the same as `model`)."
+    )
+    parser.add_argument(
+        "--tokenizer", help="Pretrained tokenizer name or path (if not the same as `model`)."
+    )
+    parser.add_argument(
+        "--cache-dir", default="./cache", help="Directory for Hugging Face downloaded models."
+    )
+    parser.add_argument(
+        "--eval-without-checkpoint",
+        action="store_true",
+        help="If active, it will evaluate the model directly from HF hub.",
+    )
+    parser.add_argument("--experiment-name", help="Suffix of MLFlow experiment.")
+    parser.add_argument("--run-name", help="Prefix of MLFlow run.")
+    parser.add_argument(
+        "--labels",
+        default=None,
+        nargs="*",
+        help="The list of labels (separated by spaces) for the task. "
+        "If not given it will fallback to the default labels for the task.",
+    )
+    parser.add_argument(
+        "--relevant-labels",
+        default=None,
+        nargs="*",
+        help="The list of relevant labels for the task, so it will calculate "
+        "the metrics with these relevant labels in consideration. If not "
+        "given it will fall back to the relevant labels for the task.",
+    )
+    parser.add_argument(
+        "--accelerator",
+        default="auto",
+        help="What device to use as accelerator (cpu, gpu, tpu, etc).",
+    )
+    parser.add_argument(
+        "--num-workers",
+        default=-1,
+        type=int,
+        help="Number of workers to use for DataLoaders. Set to -1 to use all cpus.",
+    )
+    parser.add_argument("--batch-size", default=32, type=int, help="Batch size for evaluation.")
+    parser.add_argument(
+        "--max-seq-length",
+        type=int,
+        help="The maximum total input sequence length after tokenization."
+        "Sequences longer than this will be truncated, "
+        "sequences shorter will be padded. "
+        "If left empty it will truncate to the model's max size and pad to "
+        "the maximum size of each training step.",
+    )
+    parser.add_argument(
+        "--lower-case", action="store_true", help="Should be active for lowercase transformers."
+    )
+    parser.add_argument(
+        "--eval-all-checkpoints",
+        action="store_true",
+        help="Evaluate all checkpoints for the model.",
+    )
+    parser.add_argument("--random-seed", default=42, type=int, help="Initial random seed.")
+    parser.add_argument(
+        "--weighted-loss",
+        action="store_true",
+        help="Only useful for Relationship Classification trainings. "
+        "If true the loss function is weighted inversely by class.",
+    )
+    parser.add_argument(
+        "--add-prefix-space", action="store_true", help="Activate for Roberta based tokenizers."
+    )
+    parser.add_argument(
+        "--fp16", action="store_true", help="Whether to use 16-bit (mixed) precision"
+    )
+    parser.add_argument("--debug", action="store_true", help="Set for debug mode.")
     config = parser.parse_args()
 
     logging.basicConfig(
@@ -480,19 +502,24 @@ if __name__ == "__main__":
     )
 
     if config.eval_without_checkpoint and config.eval_all_checkpoints:
-        logger.error("Incompatible options present. Either choose `--eval-without-checkpoint`, "
-                     "or `--eval-all-checkpoints`.")
+        logger.error(
+            "Incompatible options present. Either choose `--eval-without-checkpoint`, "
+            "or `--eval-all-checkpoints`."
+        )
         sys.exit(1)
 
-    if config.model not in MODELS and not Path(config.model).is_file() \
-            and len(list(list_models(search=config.model))) == 0:
-        logger.error(f"The model {config.model} is not available in the list of models: "
-                     f"{', '.join(MODELS.keys())}; and is neither a HF file or HF model.")
+    if (
+        config.model not in MODELS
+        and not Path(config.model).is_file()
+        and len(list(list_models(search=config.model))) == 0
+    ):
+        logger.error(
+            f"The model {config.model} is not available in the list of models: "
+            f"{', '.join(MODELS.keys())}; and is neither a HF file or HF model."
+        )
         sys.exit(1)
 
-    data_splits = {
-        'test': config.test_data
-    }
+    data_splits = {"test": config.test_data}
 
     logger.info(f"Accelerator: {config.accelerator}.")
 
@@ -518,16 +545,14 @@ if __name__ == "__main__":
             cache_dir=config.cache_dir,
             do_lower_case=config.lower_case,
             use_fast=True,
-            add_prefix_space=config.add_prefix_space
+            add_prefix_space=config.add_prefix_space,
         ),
-        datasets_config=dict(
-            max_seq_length=config.max_seq_length
-        ),
+        datasets_config=dict(max_seq_length=config.max_seq_length),
         eval_batch_size=config.batch_size,
-        evaluation_split='test',
-        num_workers=config.num_workers
+        evaluation_split="test",
+        num_workers=config.num_workers,
     )
     data_module.prepare_data()
-    data_module.setup('fit')
+    data_module.setup("fit")
 
     evaluate_models(data_module, config)

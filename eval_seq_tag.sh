@@ -3,7 +3,7 @@
 set -ex
 
 TEST_FILE=./data/neoplasm/test.conll
-OUTPUT_DIR=./output
+OUTPUT_DIR=./results
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
 EXPERIMENT_NAME="neoplasm"

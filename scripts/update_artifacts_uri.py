@@ -39,10 +39,12 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--mlflow-uri",
-                        required=True,
-                        type=Path,
-                        help="Path to the directory where the MLFlow experiments are.")
+    parser.add_argument(
+        "--mlflow-uri",
+        required=True,
+        type=Path,
+        help="Path to the directory where the MLFlow experiments are.",
+    )
 
     args = parser.parse_args()
     mlflow_uri = args.mlflow_uri  # type: Path
@@ -56,7 +58,7 @@ if __name__ == "__main__":
         with open(experiment_meta_file, "rt") as fh:
             meta = yaml.load(fh, Loader=yaml.SafeLoader)
         new_artifact_location = mlflow_uri / experiment.experiment_id
-        meta['artifact_location'] = new_artifact_location.absolute().as_uri()
+        meta["artifact_location"] = new_artifact_location.absolute().as_uri()
         with open(experiment_meta_file, "wt") as fh:
             yaml.dump(meta, fh, Dumper=yaml.SafeDumper)
 
@@ -65,6 +67,6 @@ if __name__ == "__main__":
             with open(run_meta_file, "rt") as fh:
                 meta = yaml.load(fh, Loader=yaml.SafeLoader)
             new_artifact_uri = mlflow_uri / experiment.experiment_id / run.info.run_id / "artifacts"
-            meta['artifact_uri'] = new_artifact_uri.absolute().as_uri()
+            meta["artifact_uri"] = new_artifact_uri.absolute().as_uri()
             with open(run_meta_file, "wt") as fh:
                 yaml.dump(meta, fh, Dumper=yaml.SafeDumper)

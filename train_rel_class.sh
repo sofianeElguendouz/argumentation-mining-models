@@ -5,7 +5,7 @@ set -ex
 TRAIN_FILE=./data/neoplasm/train_relations.tsv
 TEST_FILE=./data/neoplasm/test_relations.tsv
 VALIDATION_FILE=./data/neoplasm/dev_relations.tsv
-OUTPUT_DIR=./output
+OUTPUT_DIR=./results
 TASK_TYPE=rel-class
 MODEL=deberta-v3
 EXPERIMENT_NAME="neoplasm"

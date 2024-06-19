@@ -54,28 +54,35 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
     **kwargs
         Refer to BaseTransformerModule.
     """
-    def __init__(self,
-                 model_name_or_path: str,
-                 label2id: Dict[str, int],
-                 id2label: Dict[int, str],
-                 config_name_or_path: Optional[str] = None,
-                 cache_dir: Optional[str] = None,
-                 learning_rate: float = 5e-5,
-                 weight_decay: float = 0.0,
-                 adam_epsilon: float = 1e-8,
-                 warmup_steps: int = 0,
-                 **kwargs):
-        super().__init__(model_name_or_path=model_name_or_path,
-                         label2id=label2id, id2label=id2label,
-                         config_name_or_path=config_name_or_path,
-                         cache_dir=cache_dir, learning_rate=learning_rate,
-                         weight_decay=weight_decay, adam_epsilon=adam_epsilon,
-                         warmup_steps=warmup_steps, **kwargs)
+
+    def __init__(
+        self,
+        model_name_or_path: str,
+        label2id: Dict[str, int],
+        id2label: Dict[int, str],
+        config_name_or_path: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        learning_rate: float = 5e-5,
+        weight_decay: float = 0.0,
+        adam_epsilon: float = 1e-8,
+        warmup_steps: int = 0,
+        **kwargs,
+    ):
+        super().__init__(
+            model_name_or_path=model_name_or_path,
+            label2id=label2id,
+            id2label=id2label,
+            config_name_or_path=config_name_or_path,
+            cache_dir=cache_dir,
+            learning_rate=learning_rate,
+            weight_decay=weight_decay,
+            adam_epsilon=adam_epsilon,
+            warmup_steps=warmup_steps,
+            **kwargs,
+        )
 
         self.model = AutoModelForTokenClassification.from_pretrained(
-            model_name_or_path,
-            config=self.config,
-            cache_dir=cache_dir
+            model_name_or_path, config=self.config, cache_dir=cache_dir
         )
 
     def forward(self, **inputs):
@@ -90,11 +97,11 @@ class SequenceTaggingTransformerModule(BaseTransformerModule):
         labels (if they are present) and the predictions (which are an argmax
         over the logits).
         """
-        labels = batch.pop('labels', None)
+        labels = batch.pop("labels", None)
         predictions = self(**batch).logits.argmax(dim=-1)
 
         return {
             "input_ids": batch.input_ids.tolist(),
             "labels": labels.tolist() if labels is not None else None,
-            "predictions": predictions.tolist()
+            "predictions": predictions.tolist(),
         }

@@ -62,16 +62,19 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         Extra keyword arguments dependant on the children classes. Used for the
         `_load_dataset` method among other class specific use cases.
     """
-    def __init__(self,
-                 tokenizer: AutoTokenizer,
-                 path_to_dataset: str,
-                 label2id: Optional[Dict[str, int]] = None,
-                 id2label: Optional[Dict[int, str]] = None,
-                 max_seq_length: Optional[int] = None,
-                 truncation_strategy: str = 'longest_first',
-                 **kwargs):
+
+    def __init__(
+        self,
+        tokenizer: AutoTokenizer,
+        path_to_dataset: str,
+        label2id: Optional[Dict[str, int]] = None,
+        id2label: Optional[Dict[int, str]] = None,
+        max_seq_length: Optional[int] = None,
+        truncation_strategy: str = "longest_first",
+        **kwargs,
+    ):
         super().__init__()
-        assert truncation_strategy in {'longest_first', 'only_second', 'only_first'}
+        assert truncation_strategy in {"longest_first", "only_second", "only_first"}
 
         self.tokenizer = tokenizer
 
@@ -140,22 +143,24 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Number of workers to use. If < 0 uses all CPUs.
     """
 
-    def __init__(self,
-                 data_splits: Dict[str, PosixPath],
-                 tokenizer_name_or_path: str,
-                 labels: Optional[List[str]],
-                 tokenizer_config: Dict[str, Any] = dict(use_fast=True),
-                 datasets_config: Dict[str, Any] = dict(max_seq_length=128),
-                 train_batch_size: int = 8,
-                 eval_batch_size: int = 8,
-                 evaluation_split: Optional[str] = None,
-                 num_workers: int = -1):
+    def __init__(
+        self,
+        data_splits: Dict[str, PosixPath],
+        tokenizer_name_or_path: str,
+        labels: Optional[List[str]],
+        tokenizer_config: Dict[str, Any] = dict(use_fast=True),
+        datasets_config: Dict[str, Any] = dict(max_seq_length=128),
+        train_batch_size: int = 8,
+        eval_batch_size: int = 8,
+        evaluation_split: Optional[str] = None,
+        num_workers: int = -1,
+    ):
         super().__init__()
 
         if len(data_splits) == 0:
             raise ValueError("The `data_splits` argument must not be empty.")
 
-        valid_splits = {'train', 'test', 'validation'}
+        valid_splits = {"train", "test", "validation"}
         if not valid_splits.issuperset(data_splits.keys()):
             raise ValueError(f"The data splits must be one of: {', '.join(valid_splits)}")
         if evaluation_split is not None and evaluation_split not in valid_splits:
@@ -221,9 +226,9 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         if len(self.datasets) == 0:
             raise ValueError("The datasets are not present. Please run `setup`.")
 
-        if 'train' in self.datasets:
+        if "train" in self.datasets:
             # First try with the training dataset
-            return self.datasets['train'].label2id
+            return self.datasets["train"].label2id
         elif self.evaluation_split in self.datasets:
             # Check the evaluation dataset
             return self.datasets[self.evaluation_split].label2id
@@ -245,9 +250,9 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         if len(self.datasets) == 0:
             raise ValueError("The datasets are not present. Please run `setup`.")
 
-        if 'train' in self.datasets:
+        if "train" in self.datasets:
             # First try with the training dataset
-            return self.datasets['train'].id2label
+            return self.datasets["train"].id2label
         elif self.evaluation_split in self.datasets:
             # Check the evaluation dataset
             return self.datasets[self.evaluation_split].id2label
@@ -304,12 +309,14 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Returns the dataloader for train (if it exists) otherwise returns None.
         """
         if "train" in self.datasets:
-            return DataLoader(dataset=self.datasets["train"],
-                              batch_size=self.train_batch_size,
-                              shuffle=True,
-                              drop_last=False,
-                              collate_fn=self.collate_fn,
-                              num_workers=self.num_workers)
+            return DataLoader(
+                dataset=self.datasets["train"],
+                batch_size=self.train_batch_size,
+                shuffle=True,
+                drop_last=False,
+                collate_fn=self.collate_fn,
+                num_workers=self.num_workers,
+            )
         else:
             None
 
@@ -318,12 +325,14 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         Returns the dataloader for validation (if it exists) otherwise returns None.
         """
         if "validation" in self.datasets:
-            return DataLoader(dataset=self.datasets["validation"],
-                              batch_size=self.eval_batch_size,
-                              shuffle=False,
-                              drop_last=False,
-                              collate_fn=self.collate_fn,
-                              num_workers=self.num_workers)
+            return DataLoader(
+                dataset=self.datasets["validation"],
+                batch_size=self.eval_batch_size,
+                shuffle=False,
+                drop_last=False,
+                collate_fn=self.collate_fn,
+                num_workers=self.num_workers,
+            )
         else:
             return None
 
@@ -333,12 +342,14 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         evaluation split, returns None.
         """
         if self.evaluation_split:
-            return DataLoader(dataset=self.datasets[self.evaluation_split],
-                              batch_size=self.eval_batch_size,
-                              shuffle=False,
-                              drop_last=False,
-                              collate_fn=self.collate_fn,
-                              num_workers=self.num_workers)
+            return DataLoader(
+                dataset=self.datasets[self.evaluation_split],
+                batch_size=self.eval_batch_size,
+                shuffle=False,
+                drop_last=False,
+                collate_fn=self.collate_fn,
+                num_workers=self.num_workers,
+            )
         else:
             return None
 
@@ -348,11 +359,13 @@ class BaseDataModule(LightningDataModule, metaclass=ABCMeta):
         prediction). If there's no evaluation split, returns None.
         """
         if self.evaluation_split:
-            return DataLoader(dataset=self.datasets[self.evaluation_split],
-                              batch_size=self.eval_batch_size,
-                              shuffle=False,
-                              drop_last=False,
-                              collate_fn=self.collate_fn,
-                              num_workers=self.num_workers)
+            return DataLoader(
+                dataset=self.datasets[self.evaluation_split],
+                batch_size=self.eval_batch_size,
+                shuffle=False,
+                drop_last=False,
+                collate_fn=self.collate_fn,
+                num_workers=self.num_workers,
+            )
         else:
             return None

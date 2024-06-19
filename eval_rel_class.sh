@@ -3,7 +3,7 @@
 set -ex
 
 TEST_FILE=./data/neoplasm/test_relations.tsv
-OUTPUT_DIR=./output
+OUTPUT_DIR=./results
 TASK_TYPE=rel-class
 MODEL=deberta-v3
 EXPERIMENT_NAME="neoplasm"

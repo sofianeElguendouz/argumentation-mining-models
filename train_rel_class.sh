@@ -8,8 +8,8 @@ VALIDATION_FILE=./data/neoplasm/dev_relations.tsv
 OUTPUT_DIR=./results
 TASK_TYPE=rel-class
 MODEL=deberta-v3
-EXPERIMENT_NAME="neoplasm"
-RUN_NAME="deberta-v3-model"
+EXPERIMENT_NAME=neoplasm
+RUN_NAME=deberta-v3-model
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 
@@ -20,8 +20,8 @@ EVAL_BATCH_SIZE=32
 GRADIENT_ACCUMULATION=1
 MAX_GRAD=1
 MAX_SEQ_LENGTH=128
-LEARNING_RATE=1e-5
-WEIGHT_DECAY=1e-6
+LEARNING_RATE=2e-5
+WEIGHT_DECAY=0
 WARMUP_STEPS=0
 LOG_STEPS=100
 SAVE_STEPS=250
@@ -33,8 +33,8 @@ python ./scripts/train.py \
   --output-dir $OUTPUT_DIR \
   --task-type $TASK_TYPE \
   --model $MODEL \
-  --experiment-name "$EXPERIMENT_NAME" \
-  --run-name "$RUN_NAME" \
+  --experiment-name $EXPERIMENT_NAME \
+  --run-name $RUN_NAME \
   --labels $LABELS \
   --num-devices -1 \
   --num-workers -1 \
@@ -58,8 +58,8 @@ python ./scripts/eval.py \
   --output-dir $OUTPUT_DIR \
   --task-type $TASK_TYPE \
   --model $MODEL \
-  --experiment-name "$EXPERIMENT_NAME" \
-  --run-name "$RUN_NAME" \
+  --experiment-name $EXPERIMENT_NAME \
+  --run-name $RUN_NAME \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \
@@ -69,3 +69,4 @@ python ./scripts/eval.py \
   --lower-case \
   --weighted-loss \
   --random-seed $RANDOM_SEED
+

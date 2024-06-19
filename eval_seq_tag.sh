@@ -6,8 +6,8 @@ TEST_FILE=./data/neoplasm/test.conll
 OUTPUT_DIR=./results
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
-EXPERIMENT_NAME="neoplasm"
-RUN_NAME="deberta-v3-model"
+EXPERIMENT_NAME=neoplasm
+RUN_NAME=deberta-v3-model
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
@@ -20,8 +20,8 @@ python ./scripts/eval.py \
   --output-dir $OUTPUT_DIR \
   --task-type $TASK_TYPE \
   --model $MODEL \
-  --experiment-name "$EXPERIMENT_NAME" \
-  --run-name "$RUN_NAME" \
+  --experiment-name $EXPERIMENT_NAME \
+  --run-name $RUN_NAME \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \

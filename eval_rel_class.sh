@@ -6,8 +6,8 @@ TEST_FILE=./data/neoplasm/test_relations.tsv
 OUTPUT_DIR=./results
 TASK_TYPE=rel-class
 MODEL=deberta-v3
-EXPERIMENT_NAME="neoplasm"
-RUN_NAME="deberta-v3-model"
+EXPERIMENT_NAME=neoplasm
+RUN_NAME=deberta-v3-model
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 
@@ -20,8 +20,8 @@ python ./scripts/eval.py \
   --output-dir $OUTPUT_DIR \
   --task-type $TASK_TYPE \
   --model $MODEL \
-  --experiment-name "$EXPERIMENT_NAME" \
-  --run-name "$RUN_NAME" \
+  --experiment-name $EXPERIMENT_NAME \
+  --run-name $RUN_NAME \
   --eval-all-checkpoints \
   --labels $LABELS \
   --relevant-labels $RELEVANT_LABELS \

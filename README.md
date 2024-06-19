@@ -313,7 +313,7 @@ Depending on the `train` or `eval`, there are different recorded metrics:
 
 - The `train` experiments only record the training loss and, optionally, the
   validation loss. They also have the model checkpoints logged as artifacts.
-- The `eval` experiments record accuracy and F1-score (micro and macro) over all
+- The `eval` experiments record accuracy and F1-score (micro and macro) overall
   and only relevant labels. Besides, they log as artifacts the classification
   report (for all and only relevant), the confusion matrix (numeric and as a
   heatmap) and the predictions. For the case of Sequence Tagging, it also

@@ -35,42 +35,42 @@ Installation
 ------------
 
 The Argumentation Mining Transformer Module (AMTM) is installable as a Python
-package. To do so, we recommend use some form of virtual environment first:
+package. To do so, we recommend using some form of virtual environment first:
 
     $ python -m venv amtm-venv
     $ source ./amtm-venv/bin/activate
     (amtm-venv) $ pip install --upgrade pip setuptools wheel
 
-Before installing the AMT Module package, we recommend you to install your preferred
-PyTorch version, for example, if you are running this from a machine without GPU access,
-it's recommended to install PyTorch like:
+Before installing the AMT Module package, we recommend you install your
+preferred PyTorch version, for example, if you are running this from a machine
+without GPU access, it's recommended to install PyTorch like:
 
     (amtm-venv) $ pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 
 If you don't explicitly install the version of PyTorch you'd like it's probably
-that `pip` will try to install the default version for your system when resolving
-the dependencies (e.g. for Linux it's the GPU version).
+that `pip` will try to install the default version for your system when
+resolving the dependencies (e.g. for Linux, it's the GPU version).
 
 After that, you can install the AMTM library like:
 
     (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-<VERSION>
 
-Replacing `<VERSION>` with the version you want to install (>= 1.0.1-beta). E.g.:
+Replacing `<VERSION>` with the version you want to install (>= 1.0.1-beta).
+E.g.:
 
     (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-1.0.1-beta
 
 **Note:** This installation of the AMTM Library will only install what's under
-the `./amtm` directory so you can access it via `from acta import *` under your
+the `./amtm` directory so you can access it via `from amtm import *` under your
 Python module development. This means that you can use it to directly access the
 data modules, models and other utilities. If you want to use the training
-scripts go to the
-[usage of the training and evaluation tools](#usage-of-the-training-and-evaluation-tools)
-section.
+scripts go to the [usage of the training and evaluation
+tools](#usage-of-the-training-and-evaluation-tools) section.
 
 ### Pipeline
 
-The `amtm.pipeline` module requires NLTK's PUNKT tokenizer. In order to install it run the
-following command:
+The `amtm.pipeline` module requires NLTK's PUNKT tokenizer. To install it run
+the following command:
 
     (amtm-venv) $ python -m nltk.downloader punkt
 
@@ -94,7 +94,7 @@ with the development requirements as well:
 
 ### Scripts for Traning and Evaluation
 
-There are 2 python scripts, under the `./scripts` directory, ready to use:
+There are 2 Python scripts, under the `./scripts` directory, ready to use:
 [`./scripts/train.py`](./scripts/train.py) and
 [`./scripts/eval.py`](./scripts/eval.py).
 
@@ -115,7 +115,7 @@ It requires the following parameters:
                         will be stored.
     --task-type {rel-class,seq-tag}
                         Type of task. Use one of: rel-class, seq-tag
-    --model MODEL         Either the name of one of the available models: bert,
+    --model MODEL       Either the name of one of the available models: bert,
                         deberta-v3, roberta, tiny-bert; or a Hugging Face
                         model. The HF model can be either a model available at
                         the HF Hub, or a model path. To load a checkpoint
@@ -200,8 +200,8 @@ tenth of the data, and is only useful to debug the script (e.g. to check
 everything is working after installation).
 
 Although not required, the parameters `experiment-name` and `run-name` are for
-MLFlow and are recommended to set in order to better differentiate between
-models, specially if you are trying to run several evaluations over certain
+MLFlow and are recommended to be set to better differentiate between
+models, especially if you are trying to run several evaluations over certain
 models. The bash scripts with examples have a better indication of what to do.
 
 The files `./train_rel_class.sh` and `./train_seq_tag.sh` show examples for
@@ -294,8 +294,7 @@ only possible to use a single device for inference, since MultiGPU evaluation
 it's difficult and sometimes
 [ill-defined](https://github.com/Lightning-AI/pytorch-lightning/issues/8375).
 
-The `--eval-all-checkpoints` flag is to run evaluation for each of the
-checkpoints resulted from the training experiment run. If this flag is not set,
+The `--eval-all-checkpoints` flag is to run an evaluation for each of the checkpoints resulting from the training experiment run. If this flag is not set,
 it only runs evaluation on the last checkpoint.
 
 ### MLFlow UI
@@ -308,20 +307,20 @@ the Web UI:
 Replace the `$OUTPUT_DIR` with the directory where the results were stored for
 training and evaluation. Then access [the web UI](http://localhost:5000).
 
-The experiments names have the following structures:
+The experiments' names have the following structures:
 `{TASK_TYPE}/{MODEL_NAME}/{train|eval}/{EXPERIMENT_NAME}`.
 Depending on the `train` or `eval`, there are different recorded metrics:
 
-- The `train` experiments only record the train loss and, optionally, the
+- The `train` experiments only record the training loss and, optionally, the
   validation loss. They also have the model checkpoints logged as artifacts.
 - The `eval` experiments record accuracy and F1-score (micro and macro) over all
   and only relevant labels. Besides, they log as artifacts the classification
   report (for all and only relevant), the confusion matrix (numeric and as a
-  heatmap) and the predictions. For the case of Sequence Tagging it also reports
-  the [Seqeval Metrics](https://github.com/chakki-works/seqeval).
+  heatmap) and the predictions. For the case of Sequence Tagging, it also
+  reports the [Seqeval Metrics](https://github.com/chakki-works/seqeval).
 
-For the runs, the names has the following structure: `{RUN_NAME}/{TIMESTAMP}`.
-The evaluation runs log among their parameters the run id of the training they
+For the runs, the names have the following structure: `{RUN_NAME}/{TIMESTAMP}`.
+The evaluation runs log among their parameters the `run_id` of the training they
 are based on. They also provide a link in their description to that training
 run.
 
@@ -348,5 +347,5 @@ do that for you:
 
     (amtm-venv) $ ./scripts/update_artifacts_uri.py --mlflow-uri ./output/
 
-In this case the `OUTPUT_DIR` is `output/`, but it can be replaced to whatever
-directory name you prefer.
+In this case, the `OUTPUT_DIR`` is `output/`, but it can be replaced with
+whatever directory name you prefer.

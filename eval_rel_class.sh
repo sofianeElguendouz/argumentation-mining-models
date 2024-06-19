@@ -28,6 +28,5 @@ python ./scripts/eval.py \
   --num-workers -1 \
   --batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
-  --lower-case \
   --weighted-loss \
   --random-seed $RANDOM_SEED

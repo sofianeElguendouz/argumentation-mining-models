@@ -25,7 +25,5 @@ python ./scripts/upload_model.py \
   --model $MODEL \
   --experiment-name $EXPERIMENT_NAME \
   --run-name $RUN_NAME \
-  --lower-case \
   --hf-private-repository \
   --hf-commit-message "Uploaded ${MODEL}/${TASK_TYPE} model trained on neoplasm"
-

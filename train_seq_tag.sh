@@ -44,7 +44,6 @@ python ./scripts/train.py \
   --gradient-accumulation-steps $GRADIENT_ACCUMULATION \
   --max-grad-norm $MAX_GRAD \
   --max-seq-length $MAX_SEQ_LENGTH \
-  --lower-case \
   --learning-rate $LEARNING_RATE \
   --weight-decay $WEIGHT_DECAY \
   --warmup-steps $WARMUP_STEPS \
@@ -65,6 +64,4 @@ python ./scripts/eval.py \
   --num-workers -1 \
   --batch-size $EVAL_BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
-  --lower-case \
   --random-seed $RANDOM_SEED
-

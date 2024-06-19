@@ -7,9 +7,9 @@ TEST_FILE=./data/neoplasm/test_relations.tsv
 VALIDATION_FILE=./data/neoplasm/dev_relations.tsv
 OUTPUT_DIR=./output
 TASK_TYPE=rel-class
-MODEL=roberta
+MODEL=deberta-v3
 EXPERIMENT_NAME="neoplasm"
-RUN_NAME="roberta-model"
+RUN_NAME="deberta-v3-model"
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"
 

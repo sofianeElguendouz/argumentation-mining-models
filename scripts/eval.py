@@ -241,7 +241,6 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
             config_name_or_path=config.config,
             cache_dir=config.cache_dir,
             classes_weights=data_module.classes_weights if config.weighted_loss else None,
-            crf_loss=config.crf_loss
         )
 
     mlflow_experiment_name = f"{config.task_type}/{model_name}/eval"
@@ -463,13 +462,9 @@ if __name__ == "__main__":
                         action="store_true",
                         help="Only useful for Relationship Classification trainings. "
                              "If true the loss function is weighted inversely by class.")
-    parser.add_argument("--crf-loss",
-                        action="store_true",
-                        help="Only useful for Sequence Tagging trainings. "
-                             "If true the loss function uses Conditional Random Fields.")
     parser.add_argument("--add-prefix-space",
                         action="store_true",
-                        help="Activate Roberta based models.")
+                        help="Activate for Roberta based tokenizers.")
     parser.add_argument("--fp16",
                         action="store_true",
                         help="Whether to use 16-bit (mixed) precision")

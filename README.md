@@ -25,8 +25,6 @@ Requirements
   - [PyTorch](https://pytorch.org) >= 2: Developed with 2.2.0
   - [Lightning](https://lightning.ai/) >= 2: Developed with 2.1.3
   - [Hugging Face](https://huggingface.co/) >= 4: Developed with 4.33.2
-  - [Pytorch-CRF](https://pytorch-crf.readthedocs.io/en/stable/): Developed with
-    0.7.2
 - For running the training and evaluation scripts you also need to install the
   development packages:
   - These are listed in [`dev-requirements.txt`](./dev-requirements.txt).
@@ -187,8 +185,6 @@ There are other options available as well:
     --weighted-loss     Only useful for Relationship Classification trainings.
                         If true the loss function is weighted inversely by
                         class.
-    --crf-loss          Only useful for Sequence Tagging trainings. If true
-                        the loss function uses Conditional Random Fields.
     --log-every-n-steps LOG_EVERY_N_STEPS
                         Log every N update steps.
     --save-every-n-steps SAVE_EVERY_N_STEPS
@@ -284,8 +280,6 @@ Other optional parameters are the following:
     --weighted-loss     Only useful for Relationship Classification trainings.
                         If true the loss function is weighted inversely by
                         class.
-    --crf-loss          Only useful for Sequence Tagging trainings. If true
-                        the loss function uses Conditional Random Fields.
     --fp16              Whether to use 16-bit (mixed) precision
     --debug             Set for debug mode.
 

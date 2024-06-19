@@ -5,9 +5,9 @@ set -ex
 TEST_FILE=./data/neoplasm/test.conll
 OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
-MODEL=bert
+MODEL=deberta-v3
 EXPERIMENT_NAME="neoplasm"
-RUN_NAME="bert-model"
+RUN_NAME="deberta-v3-model"
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
@@ -29,5 +29,4 @@ python ./scripts/eval.py \
   --batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
   --lower-case \
-  --crf-loss \
   --random-seed $RANDOM_SEED

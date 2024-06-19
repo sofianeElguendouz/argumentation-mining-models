@@ -115,7 +115,8 @@ It requires the following parameters:
                         will be stored.
     --task-type {rel-class,seq-tag}
                         Type of task. Use one of: rel-class, seq-tag
-    --model MODEL       Either the name of one of the available models: bert,
+    --model MODEL
+                        Either the name of one of the available models: bert,
                         deberta-v3, roberta, tiny-bert; or a Hugging Face
                         model. The HF model can be either a model available at
                         the HF Hub, or a model path. To load a checkpoint
@@ -171,7 +172,7 @@ There are other options available as well:
                         deactivate.
     --max-seq-length MAX_SEQ_LENGTH
                         The maximum total input sequence length after
-                        tokenization.Sequences longer than this will be
+                        tokenization. Sequences longer than this will be
                         truncated, sequences shorter will be padded. If left
                         empty it will truncate to the model's max size and pad
                         to the maximum size of each training step.
@@ -225,7 +226,8 @@ model. It requires the following parameters:
                         should match the output directory of the train script.
     --task-type {rel-class,seq-tag}
                         Type of task. Use one of: rel-class, seq-tag
-    --model MODEL       Either the name of one of the available models: bert,
+    --model MODEL
+                        Either the name of one of the available models: bert,
                         deberta-v3, roberta, tiny-bert; or a Hugging Face
                         model. The HF model can be either a model available at
                         the HF Hub, or a model path.
@@ -268,7 +270,7 @@ Other optional parameters are the following:
                         Batch size for evaluation.
     --max-seq-length MAX_SEQ_LENGTH
                         The maximum total input sequence length after
-                        tokenization.Sequences longer than this will be
+                        tokenization. Sequences longer than this will be
                         truncated, sequences shorter will be padded. If left
                         empty it will truncate to the model's max size and pad
                         to the maximum size of each training step.
@@ -296,6 +298,65 @@ it's difficult and sometimes
 
 The `--eval-all-checkpoints` flag is to run an evaluation for each of the checkpoints resulting from the training experiment run. If this flag is not set,
 it only runs evaluation on the last checkpoint.
+
+### Upload Models
+
+If you wish you can upload the trained models to the [Hugging Face
+hub](https://huggingface.co/models) via the `./scripts/upload_model.py` script.
+Similar to the Python evaluation script, the upload script will look for the
+last trained model with the metadata given by `experiment-name` and `run-name`
+and upload the HF model using the final checkpoint for that model.
+It requires the following parameters:
+
+    --hf-repository HF_REPOSITORY
+                        The Hugging Face repository to upload the model. You
+                        must have write access to it.
+    --mlflow-dir MLFLOW_DIR
+                        The directory where the MLFlow artifacts where saved to
+                        retrieve the checkpoint file that will be uploaded to
+                        Hugging Face
+    --task-type {rel-class,seq-tag}
+                        Type of task. Use one of: rel-class, seq-tag
+    --model MODEL
+                        Either the name of one of the available models: bert,
+                        deberta-v3, roberta, tiny-bert; or a Hugging Face model.
+                        The HF model can be either a model available at the HF
+                        Hub, or a model path.
+
+Where `mlflow-dir` must be the same directory where the MLFlow artifacts of the
+training were done. Some other optional parameters are:
+
+    --tokenizer TOKENIZER
+                        Pretrained tokenizer name or path (if not the same as
+                        `model`). Must be the same one used for the training of
+                        the model to upload.
+    --cache-dir CACHE_DIR
+                        Directory for Hugging Face downloaded models.
+    --experiment-name EXPERIMENT_NAME
+                        Suffix of MLFlow experiment. Must be the same used for
+                        the training of the model to upload.
+    --run-name RUN_NAME
+                        Prefix of MLFlow run. Must be the same used for the
+                        traning script.
+    --hf-token HF_TOKEN
+                        Token for Hugging Face. If not given will default to
+                        $HF_TOKEN env variable.
+    --lower-case        Should be active for lowercase transformers.
+    --add-prefix-space  Activate for Roberta based tokenizers.
+    --hf-commit-message HF_COMMIT_MESSAGE
+                        Commit message for the upload of the Hugging Face model.
+    --hf-private-repository
+                        Activate to upload the model as part of a private
+                        repository (if it's to be created).
+    --hf-revision HF_REVISION
+                        The revision of the model. It will be stored under a
+                        branch with this name and must be retrieved with that
+                        same revision name.
+    --debug             Set for debug mode.
+
+You need to have write access to the `HF_REPOSITORY` where you want to upload
+the model.  You also need to define the `HF_TOKEN`, either by the `--hf-token`
+option to this upload script or as the environment variable `$HF_TOKEN`.
 
 ### MLFlow UI
 

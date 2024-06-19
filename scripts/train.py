@@ -289,7 +289,7 @@ if __name__ == "__main__":
         "--max-seq-length",
         type=int,
         help=(
-            "The maximum total input sequence length after tokenization."
+            "The maximum total input sequence length after tokenization. "
             "Sequences longer than this will be truncated, "
             "sequences shorter will be padded. "
             "If left empty it will truncate to the model's max size and pad to "

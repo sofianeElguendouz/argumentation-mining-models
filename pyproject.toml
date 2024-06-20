@@ -21,6 +21,10 @@ classifiers = [
 Homepage = "https://github.com/crscardellino/argumentation-mining-transformers"
 Issues = "https://github.com/crscardellino/argumentation-mining-transformers/issues"
 
+[tool.black]
+extend-exclude = '\w*.ipynb'
+line-length = 100
+
 [tool.setuptools.packages.find]
 include = ["amtm*"]
 exclude = ["*venv*", "*env*"]

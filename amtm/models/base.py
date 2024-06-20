@@ -62,34 +62,45 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     **kwargs
         Extra keyword arguments dependant on the children classes.
     """
-    def __init__(self,
-                 model_name_or_path: str,
-                 label2id: Dict[str, int],
-                 id2label: Dict[int, str],
-                 config_name_or_path: Optional[str] = None,
-                 cache_dir: Optional[str] = None,
-                 learning_rate: float = 5e-5,
-                 weight_decay: float = 0.0,
-                 adam_epsilon: float = 1e-8,
-                 warmup_steps: int = 0,
-                 **kwargs):
+
+    def __init__(
+        self,
+        model_name_or_path: str,
+        label2id: Dict[str, int],
+        id2label: Dict[int, str],
+        config_name_or_path: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        learning_rate: float = 5e-5,
+        weight_decay: float = 0.0,
+        adam_epsilon: float = 1e-8,
+        warmup_steps: int = 0,
+        **kwargs,
+    ):
         super().__init__()
 
-        if len(label2id) != len(id2label) or\
-                not all([k1 == v2 and k2 == v1 for (k1, v1), (k2, v2)
-                         in zip(sorted(label2id.items(), key=lambda x: x[0]),
-                                sorted(id2label.items(), key=lambda x: x[1]))]):
-            raise ValueError("The parameters label2id and id2value are not the reverse "
-                             "of each other")
+        if len(label2id) != len(id2label) or not all(
+            [
+                k1 == v2 and k2 == v1
+                for (k1, v1), (k2, v2) in zip(
+                    sorted(label2id.items(), key=lambda x: x[0]),
+                    sorted(id2label.items(), key=lambda x: x[1]),
+                )
+            ]
+        ):
+            raise ValueError(
+                "The parameters label2id and id2value are not the reverse " "of each other"
+            )
 
         self.save_hyperparameters()
 
         config_name_or_path = config_name_or_path if config_name_or_path else model_name_or_path
-        self.config = AutoConfig.from_pretrained(config_name_or_path,
-                                                 num_labels=len(label2id),
-                                                 label2id=label2id,
-                                                 id2label=id2label,
-                                                 cache_dir=cache_dir)
+        self.config = AutoConfig.from_pretrained(
+            config_name_or_path,
+            num_labels=len(label2id),
+            label2id=label2id,
+            id2label=id2label,
+            cache_dir=cache_dir,
+        )
 
     @abstractmethod
     def _loss(self, batch: BatchEncoding) -> torch.Tensor:
@@ -113,6 +124,9 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
     def training_step(self, batch, batch_idx):
         loss = self._loss(batch)
         self.log("train_loss", loss, sync_dist=True, on_epoch=True)
+        self.log(
+            "learning_rate", self.lr_schedulers().get_last_lr()[0], sync_dist=True, on_epoch=True
+        )
         return self._loss(batch)
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
@@ -127,24 +141,30 @@ class BaseTransformerModule(pl.LightningModule, metaclass=ABCMeta):
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in self.model.named_parameters()
-                           if not any(nd in n for nd in no_decay)],
-                "weight_decay": self.hparams.weight_decay
+                "params": [
+                    p
+                    for n, p in self.model.named_parameters()
+                    if not any(nd in n for nd in no_decay)
+                ],
+                "weight_decay": self.hparams.weight_decay,
             },
             {
-                "params": [p for n, p in self.model.named_parameters()
-                           if any(nd in n for nd in no_decay)],
-                "weight_decay": 0.0
-            }
+                "params": [
+                    p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)
+                ],
+                "weight_decay": 0.0,
+            },
         ]
-        optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
-                                      lr=self.hparams.learning_rate,
-                                      eps=self.hparams.adam_epsilon)
+        optimizer = torch.optim.AdamW(
+            optimizer_grouped_parameters,
+            lr=self.hparams.learning_rate,
+            eps=self.hparams.adam_epsilon,
+        )
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
             num_warmup_steps=self.hparams.warmup_steps,
-            num_training_steps=self.trainer.estimated_stepping_batches
+            num_training_steps=self.trainer.estimated_stepping_batches,
         )
         scheduler = {"scheduler": scheduler, "interval": "step", "frequency": 1}
 

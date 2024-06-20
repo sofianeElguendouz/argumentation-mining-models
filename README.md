@@ -25,8 +25,6 @@ Requirements
   - [PyTorch](https://pytorch.org) >= 2: Developed with 2.2.0
   - [Lightning](https://lightning.ai/) >= 2: Developed with 2.1.3
   - [Hugging Face](https://huggingface.co/) >= 4: Developed with 4.33.2
-  - [Pytorch-CRF](https://pytorch-crf.readthedocs.io/en/stable/): Developed with
-    0.7.2
 - For running the training and evaluation scripts you also need to install the
   development packages:
   - These are listed in [`dev-requirements.txt`](./dev-requirements.txt).
@@ -37,42 +35,42 @@ Installation
 ------------
 
 The Argumentation Mining Transformer Module (AMTM) is installable as a Python
-package. To do so, we recommend use some form of virtual environment first:
+package. To do so, we recommend using some form of virtual environment first:
 
     $ python -m venv amtm-venv
     $ source ./amtm-venv/bin/activate
     (amtm-venv) $ pip install --upgrade pip setuptools wheel
 
-Before installing the AMT Module package, we recommend you to install your preferred
-PyTorch version, for example, if you are running this from a machine without GPU access,
-it's recommended to install PyTorch like:
+Before installing the AMT Module package, we recommend you install your
+preferred PyTorch version, for example, if you are running this from a machine
+without GPU access, it's recommended to install PyTorch like:
 
     (amtm-venv) $ pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 
 If you don't explicitly install the version of PyTorch you'd like it's probably
-that `pip` will try to install the default version for your system when resolving
-the dependencies (e.g. for Linux it's the GPU version).
+that `pip` will try to install the default version for your system when
+resolving the dependencies (e.g. for Linux, it's the GPU version).
 
 After that, you can install the AMTM library like:
 
     (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-<VERSION>
 
-Replacing `<VERSION>` with the version you want to install (>= 1.0.1-beta). E.g.:
+Replacing `<VERSION>` with the version you want to install (>= 1.0.1-beta).
+E.g.:
 
     (amtm-venv) $ pip install git+https://github.com/crscardellino/argumentation-mining-transformers@amtm-1.0.1-beta
 
 **Note:** This installation of the AMTM Library will only install what's under
-the `./amtm` directory so you can access it via `from acta import *` under your
+the `./amtm` directory so you can access it via `from amtm import *` under your
 Python module development. This means that you can use it to directly access the
 data modules, models and other utilities. If you want to use the training
-scripts go to the
-[usage of the training and evaluation tools](#usage-of-the-training-and-evaluation-tools)
-section.
+scripts go to the [usage of the training and evaluation
+tools](#usage-of-the-training-and-evaluation-tools) section.
 
 ### Pipeline
 
-The `amtm.pipeline` module requires NLTK's PUNKT tokenizer. In order to install it run the
-following command:
+The `amtm.pipeline` module requires NLTK's PUNKT tokenizer. To install it run
+the following command:
 
     (amtm-venv) $ python -m nltk.downloader punkt
 
@@ -96,7 +94,7 @@ with the development requirements as well:
 
 ### Scripts for Traning and Evaluation
 
-There are 2 python scripts, under the `./scripts` directory, ready to use:
+There are 2 Python scripts, under the `./scripts` directory, ready to use:
 [`./scripts/train.py`](./scripts/train.py) and
 [`./scripts/eval.py`](./scripts/eval.py).
 
@@ -117,7 +115,8 @@ It requires the following parameters:
                         will be stored.
     --task-type {rel-class,seq-tag}
                         Type of task. Use one of: rel-class, seq-tag
-    --model MODEL         Either the name of one of the available models: bert,
+    --model MODEL
+                        Either the name of one of the available models: bert,
                         deberta-v3, roberta, tiny-bert; or a Hugging Face
                         model. The HF model can be either a model available at
                         the HF Hub, or a model path. To load a checkpoint
@@ -173,7 +172,7 @@ There are other options available as well:
                         deactivate.
     --max-seq-length MAX_SEQ_LENGTH
                         The maximum total input sequence length after
-                        tokenization.Sequences longer than this will be
+                        tokenization. Sequences longer than this will be
                         truncated, sequences shorter will be padded. If left
                         empty it will truncate to the model's max size and pad
                         to the maximum size of each training step.
@@ -187,8 +186,6 @@ There are other options available as well:
     --weighted-loss     Only useful for Relationship Classification trainings.
                         If true the loss function is weighted inversely by
                         class.
-    --crf-loss          Only useful for Sequence Tagging trainings. If true
-                        the loss function uses Conditional Random Fields.
     --log-every-n-steps LOG_EVERY_N_STEPS
                         Log every N update steps.
     --save-every-n-steps SAVE_EVERY_N_STEPS
@@ -204,8 +201,8 @@ tenth of the data, and is only useful to debug the script (e.g. to check
 everything is working after installation).
 
 Although not required, the parameters `experiment-name` and `run-name` are for
-MLFlow and are recommended to set in order to better differentiate between
-models, specially if you are trying to run several evaluations over certain
+MLFlow and are recommended to be set to better differentiate between
+models, especially if you are trying to run several evaluations over certain
 models. The bash scripts with examples have a better indication of what to do.
 
 The files `./train_rel_class.sh` and `./train_seq_tag.sh` show examples for
@@ -229,7 +226,8 @@ model. It requires the following parameters:
                         should match the output directory of the train script.
     --task-type {rel-class,seq-tag}
                         Type of task. Use one of: rel-class, seq-tag
-    --model MODEL       Either the name of one of the available models: bert,
+    --model MODEL
+                        Either the name of one of the available models: bert,
                         deberta-v3, roberta, tiny-bert; or a Hugging Face
                         model. The HF model can be either a model available at
                         the HF Hub, or a model path.
@@ -272,7 +270,7 @@ Other optional parameters are the following:
                         Batch size for evaluation.
     --max-seq-length MAX_SEQ_LENGTH
                         The maximum total input sequence length after
-                        tokenization.Sequences longer than this will be
+                        tokenization. Sequences longer than this will be
                         truncated, sequences shorter will be padded. If left
                         empty it will truncate to the model's max size and pad
                         to the maximum size of each training step.
@@ -284,8 +282,6 @@ Other optional parameters are the following:
     --weighted-loss     Only useful for Relationship Classification trainings.
                         If true the loss function is weighted inversely by
                         class.
-    --crf-loss          Only useful for Sequence Tagging trainings. If true
-                        the loss function uses Conditional Random Fields.
     --fp16              Whether to use 16-bit (mixed) precision
     --debug             Set for debug mode.
 
@@ -300,9 +296,67 @@ only possible to use a single device for inference, since MultiGPU evaluation
 it's difficult and sometimes
 [ill-defined](https://github.com/Lightning-AI/pytorch-lightning/issues/8375).
 
-The `--eval-all-checkpoints` flag is to run evaluation for each of the
-checkpoints resulted from the training experiment run. If this flag is not set,
+The `--eval-all-checkpoints` flag is to run an evaluation for each of the checkpoints resulting from the training experiment run. If this flag is not set,
 it only runs evaluation on the last checkpoint.
+
+### Upload Models
+
+If you wish you can upload the trained models to the [Hugging Face
+hub](https://huggingface.co/models) via the `./scripts/upload_model.py` script.
+Similar to the Python evaluation script, the upload script will look for the
+last trained model with the metadata given by `experiment-name` and `run-name`
+and upload the HF model using the final checkpoint for that model.
+It requires the following parameters:
+
+    --hf-repository HF_REPOSITORY
+                        The Hugging Face repository to upload the model. You
+                        must have write access to it.
+    --mlflow-dir MLFLOW_DIR
+                        The directory where the MLFlow artifacts where saved to
+                        retrieve the checkpoint file that will be uploaded to
+                        Hugging Face
+    --task-type {rel-class,seq-tag}
+                        Type of task. Use one of: rel-class, seq-tag
+    --model MODEL
+                        Either the name of one of the available models: bert,
+                        deberta-v3, roberta, tiny-bert; or a Hugging Face model.
+                        The HF model can be either a model available at the HF
+                        Hub, or a model path.
+
+Where `mlflow-dir` must be the same directory where the MLFlow artifacts of the
+training were done. Some other optional parameters are:
+
+    --tokenizer TOKENIZER
+                        Pretrained tokenizer name or path (if not the same as
+                        `model`). Must be the same one used for the training of
+                        the model to upload.
+    --cache-dir CACHE_DIR
+                        Directory for Hugging Face downloaded models.
+    --experiment-name EXPERIMENT_NAME
+                        Suffix of MLFlow experiment. Must be the same used for
+                        the training of the model to upload.
+    --run-name RUN_NAME
+                        Prefix of MLFlow run. Must be the same used for the
+                        traning script.
+    --hf-token HF_TOKEN
+                        Token for Hugging Face. If not given will default to
+                        $HF_TOKEN env variable.
+    --lower-case        Should be active for lowercase transformers.
+    --add-prefix-space  Activate for Roberta based tokenizers.
+    --hf-commit-message HF_COMMIT_MESSAGE
+                        Commit message for the upload of the Hugging Face model.
+    --hf-private-repository
+                        Activate to upload the model as part of a private
+                        repository (if it's to be created).
+    --hf-revision HF_REVISION
+                        The revision of the model. It will be stored under a
+                        branch with this name and must be retrieved with that
+                        same revision name.
+    --debug             Set for debug mode.
+
+You need to have write access to the `HF_REPOSITORY` where you want to upload
+the model.  You also need to define the `HF_TOKEN`, either by the `--hf-token`
+option to this upload script or as the environment variable `$HF_TOKEN`.
 
 ### MLFlow UI
 
@@ -314,20 +368,20 @@ the Web UI:
 Replace the `$OUTPUT_DIR` with the directory where the results were stored for
 training and evaluation. Then access [the web UI](http://localhost:5000).
 
-The experiments names have the following structures:
+The experiments' names have the following structures:
 `{TASK_TYPE}/{MODEL_NAME}/{train|eval}/{EXPERIMENT_NAME}`.
 Depending on the `train` or `eval`, there are different recorded metrics:
 
-- The `train` experiments only record the train loss and, optionally, the
+- The `train` experiments only record the training loss and, optionally, the
   validation loss. They also have the model checkpoints logged as artifacts.
-- The `eval` experiments record accuracy and F1-score (micro and macro) over all
+- The `eval` experiments record accuracy and F1-score (micro and macro) overall
   and only relevant labels. Besides, they log as artifacts the classification
   report (for all and only relevant), the confusion matrix (numeric and as a
-  heatmap) and the predictions. For the case of Sequence Tagging it also reports
-  the [Seqeval Metrics](https://github.com/chakki-works/seqeval).
+  heatmap) and the predictions. For the case of Sequence Tagging, it also
+  reports the [Seqeval Metrics](https://github.com/chakki-works/seqeval).
 
-For the runs, the names has the following structure: `{RUN_NAME}/{TIMESTAMP}`.
-The evaluation runs log among their parameters the run id of the training they
+For the runs, the names have the following structure: `{RUN_NAME}/{TIMESTAMP}`.
+The evaluation runs log among their parameters the `run_id` of the training they
 are based on. They also provide a link in their description to that training
 run.
 
@@ -354,5 +408,5 @@ do that for you:
 
     (amtm-venv) $ ./scripts/update_artifacts_uri.py --mlflow-uri ./output/
 
-In this case the `OUTPUT_DIR` is `output/`, but it can be replaced to whatever
-directory name you prefer.
+In this case, the `OUTPUT_DIR`` is `output/`, but it can be replaced with
+whatever directory name you prefer.

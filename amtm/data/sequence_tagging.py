@@ -76,62 +76,75 @@ class SequenceTaggingDataset(BaseDataset):
         `use_extension_label`. If the extension label 'X' exists, it will use
         it, otherwise it will use the special 'PAD' label.
     """
-    def __init__(self,
-                 tokenizer: AutoTokenizer,
-                 path_to_dataset: str,
-                 label2id: Optional[Dict[str, int]] = None,
-                 id2label: Optional[Dict[int, str]] = None,
-                 max_seq_length: Optional[int] = None,
-                 truncation_strategy: str = 'longest_first',
-                 delimiter: str = '\t',
-                 token_position: int = 1,
-                 label_position: int = 4,
-                 use_extension_label: bool = False,
-                 copy_label_to_subtoken: bool = True,
-                 **kwargs):
-        super().__init__(tokenizer=tokenizer,
-                         path_to_dataset=path_to_dataset,
-                         label2id=label2id, id2label=id2label,
-                         max_seq_length=max_seq_length, truncation_strategy=truncation_strategy,
-                         delimiter=delimiter, token_position=token_position,
-                         label_position=label_position, **kwargs)
+
+    def __init__(
+        self,
+        tokenizer: AutoTokenizer,
+        path_to_dataset: str,
+        label2id: Optional[Dict[str, int]] = None,
+        id2label: Optional[Dict[int, str]] = None,
+        max_seq_length: Optional[int] = None,
+        truncation_strategy: str = "longest_first",
+        delimiter: str = "\t",
+        token_position: int = 1,
+        label_position: int = 4,
+        use_extension_label: bool = False,
+        copy_label_to_subtoken: bool = True,
+        **kwargs,
+    ):
+        super().__init__(
+            tokenizer=tokenizer,
+            path_to_dataset=path_to_dataset,
+            label2id=label2id,
+            id2label=id2label,
+            max_seq_length=max_seq_length,
+            truncation_strategy=truncation_strategy,
+            delimiter=delimiter,
+            token_position=token_position,
+            label_position=label_position,
+            **kwargs,
+        )
 
         self.use_extension_label = use_extension_label
         self.copy_label_to_subtoken = copy_label_to_subtoken
 
-        if 'PAD' not in self.label2id and 0 in self.id2label:
+        if "PAD" not in self.label2id and 0 in self.id2label:
             replace_label = self.id2label[0]
-            logger.warning(f"Replacing the id of label '{replace_label}' because 0 is reserved "
-                           f"for special padding label 'PAD'. The new id of '{replace_label}' "
-                           f"will be '{len(self.label2id)}'")
+            logger.warning(
+                f"Replacing the id of label '{replace_label}' because 0 is reserved "
+                f"for special padding label 'PAD'. The new id of '{replace_label}' "
+                f"will be '{len(self.label2id)}'"
+            )
             self.label2id[replace_label] = len(self.label2id)
             self.id2label[self.label2id[replace_label]] = replace_label
-            self.label2id['PAD'] = 0
-            self.id2label[0] = 'PAD'
-        elif 'PAD' not in self.label2id:
+            self.label2id["PAD"] = 0
+            self.id2label[0] = "PAD"
+        elif "PAD" not in self.label2id:
             logger.warning("Prepending the special label 'PAD'.")
-            self.label2id['PAD'] = 0
-            self.id2label[0] = 'PAD'
+            self.label2id["PAD"] = 0
+            self.id2label[0] = "PAD"
 
-        if self.use_extension_label and 'X' not in self.label2id:
+        if self.use_extension_label and "X" not in self.label2id:
             # Add the extension label
-            self.label2id['X'] = len(self.label2id)
-            self.id2label[self.label2id['X']] = 'X'
+            self.label2id["X"] = len(self.label2id)
+            self.id2label[self.label2id["X"]] = "X"
 
-    def _load_dataset(self,
-                      path_to_dataset: str,
-                      missing_labels: bool = False,
-                      delimiter: str = '\t',
-                      token_position: str = 1,
-                      label_position: str = 4,
-                      **kwargs):
+    def _load_dataset(
+        self,
+        path_to_dataset: str,
+        missing_labels: bool = False,
+        delimiter: str = "\t",
+        token_position: str = 1,
+        label_position: str = 4,
+        **kwargs,
+    ):
         """
         Loads a dataset in CONLL format. The CONLL file is expected to have the
         traditional format of one word/token (with its corresponding columns,
         among of which is the label) per each line. Single blank lines serve to
         separate sentences and double blank lines serve to separate paragraphs.
         """
-        with open(path_to_dataset, 'rt') as fh:
+        with open(path_to_dataset, "rt") as fh:
             sentences = []
             sentence_tokens = []
             sentence_labels = []
@@ -145,10 +158,7 @@ class SequenceTaggingDataset(BaseDataset):
                         # Happens after a paragraph change (there are 2 blank lines)
                         continue
 
-                    sentences.append({
-                        "tokens": sentence_tokens,
-                        "labels": sentence_labels
-                    })
+                    sentences.append({"tokens": sentence_tokens, "labels": sentence_labels})
                     sentence_tokens = []
                     sentence_labels = []
                 else:
@@ -160,13 +170,15 @@ class SequenceTaggingDataset(BaseDataset):
             # labels (remember there is a list of labels per data point, not a
             # single label)
             self.label2id = {
-                lbl: idx for idx, lbl in
-                enumerate(  # Get label and index
+                lbl: idx
+                for idx, lbl in enumerate(  # Get label and index
                     sorted(  # From the sorted list
                         set(  # Of the set of labels (unique per label)
-                            chain(*[  # Concatenate the lists of labels in each sentence
-                                sentence["labels"] for sentence in sentences
-                            ])
+                            chain(
+                                *[  # Concatenate the lists of labels in each sentence
+                                    sentence["labels"] for sentence in sentences
+                                ]
+                            )
                         )
                     )
                 )
@@ -174,14 +186,15 @@ class SequenceTaggingDataset(BaseDataset):
 
         self.dataset = [
             {
-                "tokens": sentence['tokens'],
-                "labels": [self.label2id[lbl] for lbl in sentence['labels']]
-            } for sentence in sentences
+                "tokens": sentence["tokens"],
+                "labels": [self.label2id[lbl] for lbl in sentence["labels"]],
+            }
+            for sentence in sentences
         ]
 
-    def _tokenize_and_align_labels(self,
-                                   sentence: Dict[str, Union[List[str], List[int]]])\
-            -> BatchEncoding:
+    def _tokenize_and_align_labels(
+        self, sentence: Dict[str, Union[List[str], List[int]]]
+    ) -> BatchEncoding:
         """
         Function to tokenize and align labels. This is needed since transformers
         Tokenizer (which use subword tokenization) can split a single token in
@@ -205,27 +218,28 @@ class SequenceTaggingDataset(BaseDataset):
         """
         tokenized_sentence = self.tokenizer(
             sentence["tokens"],
-            padding='max_length' if self.max_seq_length else False,
+            padding="max_length" if self.max_seq_length else False,
             truncation=self.truncation_strategy,
             max_length=self.max_seq_length,
-            is_split_into_words=True
+            is_split_into_words=True,
         )
 
         sentence_labels = []
         word_ids = tokenized_sentence.word_ids()
         previous_wid = None
-        for wid, attmsk in zip(word_ids, tokenized_sentence['attention_mask']):
+        for wid, attmsk in zip(word_ids, tokenized_sentence["attention_mask"]):
             if wid is None:
                 if attmsk == 1:
                     # For special tokens ([CLS], [SEP], <s>, etc) that don't have an assigned label,
                     # depending on the configuration, we use the extension label 'X' or
                     # the 'PAD' label
-                    extension_label = self.label2id['X'] if self.use_extension_label\
-                        else self.label2id['PAD']
+                    extension_label = (
+                        self.label2id["X"] if self.use_extension_label else self.label2id["PAD"]
+                    )
                     sentence_labels.append(extension_label)
                 if attmsk == 0:
                     # This is a token for padding, assign the PAD label
-                    sentence_labels.append(self.label2id['PAD'])
+                    sentence_labels.append(self.label2id["PAD"])
             elif wid != previous_wid:
                 # If it is the first subtoken of a work, use its corresponding label
                 sentence_labels.append(sentence["labels"][wid])
@@ -239,14 +253,14 @@ class SequenceTaggingDataset(BaseDataset):
                     # comparable experimentation as to wether it is useful or not
                     sentence_labels.append(sentence["labels"][wid])
                 elif self.use_extension_label:
-                    sentence_labels.append(self.label2id['X'])
+                    sentence_labels.append(self.label2id["X"])
                 else:
-                    sentence_labels.append(self.label2id['PAD'])
+                    sentence_labels.append(self.label2id["PAD"])
             previous_wid = wid
 
-        tokenized_sentence['labels'] = sentence_labels
+        tokenized_sentence["labels"] = sentence_labels
 
-        assert len(tokenized_sentence['input_ids']) == len(tokenized_sentence['labels'])
+        assert len(tokenized_sentence["input_ids"]) == len(tokenized_sentence["labels"])
 
         return tokenized_sentence
 
@@ -256,8 +270,9 @@ class SequenceTaggingDataset(BaseDataset):
     def __getitem__(self, idx) -> BatchEncoding:
         if isinstance(idx, slice):
             # Tokenize each sentence separately
-            tokenized_sentences = [self._tokenize_and_align_labels(sentence)
-                                   for sentence in self.dataset[idx]]
+            tokenized_sentences = [
+                self._tokenize_and_align_labels(sentence) for sentence in self.dataset[idx]
+            ]
             # Build a batch encoding from them:
             # The following snippet takes each of the possible keys (from the
             # list of dictionaries that is tokenized_sentences) and
@@ -268,10 +283,12 @@ class SequenceTaggingDataset(BaseDataset):
             # {k1: [va1, vb1], k2: [va2, vb2]}
             # Since the values are all lists, this returns a dictionary
             # with the values being a list of lists
-            return BatchEncoding({
-                key: [ts.get(key, []) for ts in tokenized_sentences]
-                for key in set(chain(*[ts.keys() for ts in tokenized_sentences]))
-            })
+            return BatchEncoding(
+                {
+                    key: [ts.get(key, []) for ts in tokenized_sentences]
+                    for key in set(chain(*[ts.keys() for ts in tokenized_sentences]))
+                }
+            )
         else:
             return self._tokenize_and_align_labels(self.dataset[idx])
 
@@ -281,6 +298,7 @@ class SequenceTaggingDataModule(BaseDataModule):
     DataModule for sequence tagging (i.e. classify each token in a sequence of
     tokens).
     """
+
     LABELS = [
         "PAD",
         "O",
@@ -292,14 +310,16 @@ class SequenceTaggingDataModule(BaseDataModule):
 
     @property
     def collate_fn(self) -> Callable:
-        return DataCollatorForTokenClassification(self.tokenizer,
-                                                  label_pad_token_id=self.label2id['PAD'])
+        return DataCollatorForTokenClassification(
+            self.tokenizer, label_pad_token_id=self.label2id["PAD"]
+        )
 
-    def decode_predictions(self,
-                           input_ids: Union[List[int], List[List[int]]],
-                           predictions: Union[List[int], List[List[int]]],
-                           labels: Union[List[int], List[List[int]], None] = None)\
-            -> Union[List[Tuple[str]], List[List[Tuple[str]]]]:
+    def decode_predictions(
+        self,
+        input_ids: Union[List[int], List[List[int]]],
+        predictions: Union[List[int], List[List[int]]],
+        labels: Union[List[int], List[List[int]], None] = None,
+    ) -> Union[List[Tuple[str]], List[List[Tuple[str]]]]:
         """
         Decodes the input_ids, which can be a single instance (List[int]) or a
         batch of instances (List[List[int]]) into the corresponding list of
@@ -331,14 +351,12 @@ class SequenceTaggingDataModule(BaseDataModule):
             label is given.
         """
         if isinstance(input_ids[0], int):
-            special_tokens = self.tokenizer.get_special_tokens_mask(input_ids,
-                                                                    already_has_special_tokens=True)
+            special_tokens = self.tokenizer.get_special_tokens_mask(
+                input_ids, already_has_special_tokens=True
+            )
             if labels is None:
                 return [
-                    (
-                        self.tokenizer.convert_ids_to_tokens(token),
-                        self.id2label[prediction]
-                    )
+                    (self.tokenizer.convert_ids_to_tokens(token), self.id2label[prediction])
                     for token, prediction, mask in zip(input_ids, predictions, special_tokens)
                     if mask == 0
                 ]
@@ -347,10 +365,11 @@ class SequenceTaggingDataModule(BaseDataModule):
                     (
                         self.tokenizer.convert_ids_to_tokens(token),
                         self.id2label[prediction],
-                        self.id2label[label]
+                        self.id2label[label],
                     )
-                    for token, prediction, label, mask in zip(input_ids, predictions,
-                                                              labels, special_tokens)
+                    for token, prediction, label, mask in zip(
+                        input_ids, predictions, labels, special_tokens
+                    )
                     if mask == 0
                 ]
         else:
@@ -360,26 +379,33 @@ class SequenceTaggingDataModule(BaseDataModule):
                     special_tokens = self.tokenizer.get_special_tokens_mask(
                         stokens, already_has_special_tokens=True
                     )
-                    outputs.append([(
-                            self.tokenizer.convert_ids_to_tokens(token),
-                            self.id2label[prediction]
-                        ) for token, prediction, mask in zip(stokens, spredictions,
-                                                             special_tokens)
-                          if mask == 0
-                    ])
+                    outputs.append(
+                        [
+                            (self.tokenizer.convert_ids_to_tokens(token), self.id2label[prediction])
+                            for token, prediction, mask in zip(
+                                stokens, spredictions, special_tokens
+                            )
+                            if mask == 0
+                        ]
+                    )
             else:
                 for stokens, spredictions, slabels in zip(input_ids, predictions, labels):
                     special_tokens = self.tokenizer.get_special_tokens_mask(
                         stokens, already_has_special_tokens=True
                     )
-                    outputs.append([(
-                            self.tokenizer.convert_ids_to_tokens(token),
-                            self.id2label[prediction],
-                            self.id2label[label]
-                        ) for token, prediction, label, mask in zip(stokens, spredictions, slabels,
-                                                                    special_tokens)
-                          if mask == 0
-                    ])
+                    outputs.append(
+                        [
+                            (
+                                self.tokenizer.convert_ids_to_tokens(token),
+                                self.id2label[prediction],
+                                self.id2label[label],
+                            )
+                            for token, prediction, label, mask in zip(
+                                stokens, spredictions, slabels, special_tokens
+                            )
+                            if mask == 0
+                        ]
+                    )
             return outputs
 
     def _load_dataset_split(self, path_to_dataset: str) -> SequenceTaggingDataset:
@@ -390,5 +416,5 @@ class SequenceTaggingDataModule(BaseDataModule):
             tokenizer=self.tokenizer,
             path_to_dataset=path_to_dataset,
             label2id=self.labels,
-            **self.datasets_config
+            **self.datasets_config,
         )

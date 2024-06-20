@@ -167,3 +167,5 @@ data/casimedicos/
 /*output*/
 /*logs*/
 test*.ipynb
+*_debug.sh
+results/

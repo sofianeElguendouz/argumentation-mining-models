@@ -3,12 +3,12 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "argumentation-mining-transformers"
-version = "1.1.0"
+name = "argumentation-mining-transformers-module"
+version = "1.0.0"
 authors = [
     { name="Cristian Cardellino", email="cristian.a.cardellino@inria.fr" },
 ]
-description = "Implementation of 'Transformed-based Argument Mining'"
+description = "Module to train Transformer-based Argumentation Mining models"
 readme = "README.md"
 requires-python = ">=3.10.8"
 dynamic = ["dependencies", "optional-dependencies"]

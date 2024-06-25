@@ -5,7 +5,7 @@ set -ex
 TRAIN_FILE=./data/neoplasm/train.conll
 TEST_FILE=./data/neoplasm/test.conll
 VALIDATION_FILE=./data/neoplasm/dev.conll
-OUTPUT_DIR=./results
+OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
 EXPERIMENT_NAME=neoplasm

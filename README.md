@@ -324,7 +324,8 @@ It requires the following parameters:
                         Hub, or a model path.
 
 Where `mlflow-dir` must be the same directory where the MLFlow artifacts of the
-training were done. Some other optional parameters are:
+training were uploaded (i.e., the `OUTPUT_DIR` of the training script). Some
+other optional parameters are:
 
     --tokenizer TOKENIZER
                         Pretrained tokenizer name or path (if not the same as
@@ -408,5 +409,5 @@ do that for you:
 
     (amtm-venv) $ ./scripts/update_artifacts_uri.py --mlflow-uri ./output/
 
-In this case, the `OUTPUT_DIR`` is `output/`, but it can be replaced with
+In this case, the `OUTPUT_DIR` is `output/`, but it can be replaced with
 whatever directory name you prefer.

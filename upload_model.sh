@@ -10,7 +10,7 @@
 
 set -ex
 
-MLFLOW_DIR=./results
+MLFLOW_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
 EXPERIMENT_NAME=neoplasm

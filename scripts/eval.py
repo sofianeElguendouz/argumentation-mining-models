@@ -38,8 +38,16 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tempfile import TemporaryDirectory
 from typing import Dict, Union
 
-from amtm.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from amtm.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
+from amtm.data import (
+    RelationClassificationDataModule,
+    SequenceTaggingDataModule,
+    StatementClassificationDataModule,
+)
+from amtm.models import (
+    RelationClassificationTransformerModule,
+    SequenceTaggingTransformerModule,
+    StatementClassificationTransformerModule,
+)
 from amtm.utils import compute_metrics, compute_seq_tag_labels_metrics, compute_seqeval_metrics
 
 
@@ -53,8 +61,21 @@ MODELS = {
 
 # Available tasks to work with
 TASKS = {
-    "rel-class": (RelationClassificationDataModule, RelationClassificationTransformerModule, "tsv"),
-    "seq-tag": (SequenceTaggingDataModule, SequenceTaggingTransformerModule, "conll"),
+    "rel-class": (
+        RelationClassificationDataModule,
+        RelationClassificationTransformerModule,
+        "tsv",
+    ),
+    "seq-tag": (
+        SequenceTaggingDataModule,
+        SequenceTaggingTransformerModule,
+        "conll",
+    ),
+    "sta-class": (
+        StatementClassificationDataModule,
+        StatementClassificationTransformerModule,
+        "tsv",
+    ),
 }
 
 logger = logging.getLogger(__name__)
@@ -96,7 +117,7 @@ def evaluate_model(
         for decoded_prediction in data_module.decode_predictions(**batch_prediction)
     ]
 
-    if config.task_type == "rel-class":
+    if config.task_type != "seq-tag":
         if config.relevant_labels is not None:
             relevant_labels = config.relevant_labels
         else:
@@ -105,6 +126,7 @@ def evaluate_model(
         pred_labels = []
         for prediction in decoded_predictions:
             # Predictions have the form (true_label, predicted_label, sentence1, sentence2)
+            # or (true_label, predicted_label, sentence) if it's a statement classification task
             true_labels.append(prediction[0])
             pred_labels.append(prediction[1])
         metrics = compute_metrics(
@@ -340,7 +362,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                     mlflow.log_artifact(f"{dh}/confusion_matrix_step={checkpoint_step:05d}.png")
 
                     predictions_file = f"predictions_step={checkpoint_step:05d}"
-                    if config.task_type == "rel-class":
+                    if config.task_type != "seq-tag":
                         predictions_file += ".tsv"
                     else:
                         predictions_file += "_conll.txt"  # .txt extension so it previews on MLFlow
@@ -377,7 +399,7 @@ def evaluate_models(data_module: pl.LightningDataModule, config: argparse.Namesp
                 mlflow.log_artifact(f"{dh}/confusion_matrix.png")
 
                 predictions_file = "predictions"
-                if config.task_type == "rel-class":
+                if config.task_type != "rel-class":
                     predictions_file += ".tsv"
                 else:
                     predictions_file += "_conll.txt"  # .txt extension so it previews on MLFlow

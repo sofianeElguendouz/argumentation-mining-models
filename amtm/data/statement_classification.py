@@ -140,7 +140,7 @@ class StatementClassificationDataset(BaseDataset):
         return tokenized_data
 
 
-class RelationClassificationDataModule(BaseDataModule):
+class StatementClassificationDataModule(BaseDataModule):
     """
     Data module for classification of argumentative statements (e.g. position,
     supporting argument, attacking argument, etc.).

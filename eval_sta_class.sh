@@ -2,17 +2,17 @@
 
 set -ex
 
-TEST_FILE=./data/sequence/disputool-test.conll
+TEST_FILE=./data/classification/touche-test.tsv
 OUTPUT_DIR=./output
-TASK_TYPE=seq-tag
+TASK_TYPE=sta-class
 MODEL=deberta-v3
-EXPERIMENT_NAME=disputool
+EXPERIMENT_NAME=touche23-valueeval
 RUN_NAME=deberta-v3-model
-LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
-RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
+LABELS="noRel Attack Support"
+RELEVANT_LABELS="Attack Support"
 
-BATCH_SIZE=64
-MAX_SEQ_LENGTH=10
+BATCH_SIZE=32
+MAX_SEQ_LENGTH=128
 RANDOM_SEED=42
 
 python ./scripts/eval.py \
@@ -28,4 +28,5 @@ python ./scripts/eval.py \
   --num-workers -1 \
   --batch-size $BATCH_SIZE \
   --max-seq-length $MAX_SEQ_LENGTH \
+  --weighted-loss \
   --random-seed $RANDOM_SEED

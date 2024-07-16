@@ -31,7 +31,11 @@ from huggingface_hub import list_models
 from pathlib import Path
 from transformers import AutoTokenizer
 
-from amtm.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
+from amtm.models import (
+    RelationClassificationTransformerModule,
+    SequenceTaggingTransformerModule,
+    StatementClassificationTransformerModule
+)
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +51,7 @@ MODELS = {
 TASKS = {
     "rel-class": RelationClassificationTransformerModule,
     "seq-tag": SequenceTaggingTransformerModule,
+    "sta-class": StatementClassificationTransformerModule,
 }
 
 

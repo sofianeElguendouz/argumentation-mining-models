@@ -10,7 +10,7 @@ TASK_TYPE=sta-class
 MODEL=deberta-v3
 EXPERIMENT_NAME=touche23-valueeval
 RUN_NAME=deberta-v3-model
-LABELS="noRel Attack Support"
+LABELS="Position Attack Support"
 RELEVANT_LABELS="Attack Support"
 
 EPOCHS=5

@@ -34,7 +34,7 @@ from transformers import AutoTokenizer
 from amtm.models import (
     RelationClassificationTransformerModule,
     SequenceTaggingTransformerModule,
-    StatementClassificationTransformerModule
+    StatementClassificationTransformerModule,
 )
 
 

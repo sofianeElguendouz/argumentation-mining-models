@@ -2,17 +2,17 @@
 
 set -ex
 
-TEST_FILE=./data/neoplasm/test.conll
+TEST_FILE=./data/sequence/disputool-test.conll
 OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
-EXPERIMENT_NAME=neoplasm
+EXPERIMENT_NAME=disputool
 RUN_NAME=deberta-v3-model
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
-BATCH_SIZE=32
-MAX_SEQ_LENGTH=128
+BATCH_SIZE=64
+MAX_SEQ_LENGTH=10
 RANDOM_SEED=42
 
 python ./scripts/eval.py \

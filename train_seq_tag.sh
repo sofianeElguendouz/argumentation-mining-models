@@ -2,29 +2,29 @@
 
 set -ex
 
-TRAIN_FILE=./data/neoplasm/train.conll
-TEST_FILE=./data/neoplasm/test.conll
-VALIDATION_FILE=./data/neoplasm/dev.conll
+TRAIN_FILE=./data/sequence/disputool-train.conll
+TEST_FILE=./data/sequence/disputool-test.conll
+VALIDATION_FILE=./data/sequence/disputool-validation.conll
 OUTPUT_DIR=./output
 TASK_TYPE=seq-tag
 MODEL=deberta-v3
-EXPERIMENT_NAME=neoplasm
+EXPERIMENT_NAME=disputool
 RUN_NAME=deberta-v3-model
 LABELS="PAD O B-Claim I-Claim B-Premise I-Premise"
 RELEVANT_LABELS="O B-Claim I-Claim B-Premise I-Premise"
 
 EPOCHS=5
 EARLY_STOP=2
-TRAIN_BATCH_SIZE=8
-EVAL_BATCH_SIZE=32
+TRAIN_BATCH_SIZE=64
+EVAL_BATCH_SIZE=64
 GRADIENT_ACCUMULATION=1
 MAX_GRAD=1
-MAX_SEQ_LENGTH=128
+MAX_SEQ_LENGTH=10
 LEARNING_RATE=1e-4
 WEIGHT_DECAY=0
 WARMUP_STEPS=0
-LOG_STEPS=100
-SAVE_STEPS=250
+LOG_STEPS=415
+SAVE_STEPS=930
 RANDOM_SEED=42
 
 python ./scripts/train.py \

@@ -32,8 +32,16 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from pathlib import Path
 
-from amtm.data import RelationClassificationDataModule, SequenceTaggingDataModule
-from amtm.models import RelationClassificationTransformerModule, SequenceTaggingTransformerModule
+from amtm.data import (
+    RelationClassificationDataModule,
+    SequenceTaggingDataModule,
+    StatementClassificationDataModule,
+)
+from amtm.models import (
+    RelationClassificationTransformerModule,
+    SequenceTaggingTransformerModule,
+    StatementClassificationTransformerModule,
+)
 
 
 # This is a list of models with an alias, but the script can use other models from Hugging Face
@@ -48,6 +56,7 @@ MODELS = {
 TASKS = {
     "rel-class": (RelationClassificationDataModule, RelationClassificationTransformerModule),
     "seq-tag": (SequenceTaggingDataModule, SequenceTaggingTransformerModule),
+    "sta-class": (StatementClassificationDataModule, StatementClassificationTransformerModule),
 }
 
 logger = logging.getLogger(__name__)

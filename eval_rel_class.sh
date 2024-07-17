@@ -2,11 +2,11 @@
 
 set -ex
 
-TEST_FILE=./data/neoplasm/test_relations.tsv
+TEST_FILE=./data/relation/touche-test.tsv
 OUTPUT_DIR=./output
 TASK_TYPE=rel-class
 MODEL=deberta-v3
-EXPERIMENT_NAME=neoplasm
+EXPERIMENT_NAME=touche23-valueeval
 RUN_NAME=deberta-v3-model
 LABELS="noRel Attack Support"
 RELEVANT_LABELS="Attack Support"

@@ -8,6 +8,8 @@ The module has the implementation of four tasks for Argumentation Mining:
 3. Argument Statement Classification (Sequence Classification Task), and
 4. Argument Statement Relation Classification (Sequence Classification Task)
 
+This repository was originally forked from: [Argument Mining Transformers](https://github.com/crscardellino/argumentation-mining-transformers/tree/master).
+
 Requirements
 ------------
 

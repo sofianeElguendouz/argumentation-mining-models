@@ -1,19 +1,12 @@
 Argumentation Mining Transformers Module (AMTM)
 ===============================================
 
-This repository has an implementation of the *Transformed-based Argument Mining*
-work presented by T. Mayer, E. Cabrio and S. Villata:
-[Transformer-based Argument Mining for Healthcare Applications](https://hal.archives-ouvertes.fr/hal-02879293)
-(ECAI 2020)
-
-It was originally forked from the ANTIDOTE ACTA Module, which is part of the
-ANTIDOTE Project on Explainable AI. For more information check:
-https://gitlab.com/wimmics-antidote/antidote-acta/
-
-The module has the implementation of two tasks for Argumentation Mining:
+The module has the implementation of four tasks for Argumentation Mining:
 
 1. Argument Component Detection (Sequence Tagging Task), and
-2. Argument Relation Classification (Sequence Classification Task)
+2. Argument Component Relation Classification (Sequence Classification Task), and
+3. Argument Statement Classification (Sequence Classification Task), and
+4. Argument Statement Relation Classification (Sequence Classification Task)
 
 Requirements
 ------------
